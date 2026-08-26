@@ -31,7 +31,7 @@ jest.mock('node:util', () => {
 });
 
 // Import after mocks
-import { ServerManagementService } from './server-management.service';
+import { parseMinecraftStatusOutput, ServerManagementService } from './server-management.service';
 import { AlertsService } from '../alerts/alerts.service';
 import { ServerStoreService } from '../docker-compose/server-store.service';
 import { DockerComposeService } from '../docker-compose/docker-compose.service';
@@ -40,6 +40,28 @@ import * as fs from 'fs-extra';
 
 // Get the mocked promisify result
 const mockExec = jest.requireMock('node:util').promisify();
+
+describe('parseMinecraftStatusOutput', () => {
+  it('parses Java status output', () => {
+    expect(parseMinecraftStatusOutput("127.0.0.1:25565 : version=1.21.4 online=3 max=20 motd='Minepanel'")).toEqual({
+      version: '1.21.4',
+      playersOnline: 3,
+      playersMax: 20,
+    });
+  });
+
+  it('parses Bedrock status output', () => {
+    expect(parseMinecraftStatusOutput('127.0.0.1:19132 : version=1.21.100 online=2 max=10')).toEqual({
+      version: '1.21.100',
+      playersOnline: 2,
+      playersMax: 10,
+    });
+  });
+
+  it('returns null when the game status cannot be read', () => {
+    expect(parseMinecraftStatusOutput('server is still starting')).toBeNull();
+  });
+});
 
 describe('ServerManagementService', () => {
   let service: ServerManagementService;
@@ -447,6 +469,19 @@ describe('ServerManagementService', () => {
 
       expect(result.cpuUsage).toBe('N/A');
       expect(result.memoryUsage).toBe('N/A');
+    });
+  });
+
+  describe('getServerRuntimeStats', () => {
+    it('returns unavailable stats for an invalid server ID', async () => {
+      const result = await service.getServerRuntimeStats('../invalid');
+
+      expect(result).toEqual(expect.objectContaining({
+        status: 'not_found',
+        playersOnline: null,
+        uptimeSeconds: null,
+        gameReachable: false,
+      }));
     });
   });
 
