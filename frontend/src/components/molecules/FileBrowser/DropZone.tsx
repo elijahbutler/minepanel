@@ -1,6 +1,6 @@
 "use client";
 
-import { FC, useState, useCallback, DragEvent } from "react";
+import { DragEvent, FC, useCallback, useEffect, useRef, useState } from "react";
 import { Upload } from "lucide-react";
 import { useLanguage } from "@/lib/hooks/useLanguage";
 import { cn } from "@/lib/utils";
@@ -42,21 +42,29 @@ export const DropZone: FC<DropZoneProps> = ({ onFilesDropped, children, classNam
   const { t } = useLanguage();
   const [isDragging, setIsDragging] = useState(false);
   const [dragCounter, setDragCounter] = useState(0);
+  const disabledRef = useRef(disabled);
+  disabledRef.current = disabled;
+
+  useEffect(() => {
+    if (!disabled) return;
+    setIsDragging(false);
+    setDragCounter(0);
+  }, [disabled]);
 
   const handleDragEnter = useCallback((e: DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (disabled) return;
+    if (disabledRef.current) return;
     setDragCounter((prev) => prev + 1);
     if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
       setIsDragging(true);
     }
-  }, [disabled]);
+  }, []);
 
   const handleDragLeave = useCallback((e: DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (disabled) return;
+    if (disabledRef.current) return;
     setDragCounter((prev) => {
       const newCount = prev - 1;
       if (newCount === 0) {
@@ -64,19 +72,19 @@ export const DropZone: FC<DropZoneProps> = ({ onFilesDropped, children, classNam
       }
       return newCount;
     });
-  }, [disabled]);
+  }, []);
 
   const handleDragOver = useCallback((e: DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (disabled) return;
-  }, [disabled]);
+    if (disabledRef.current) return;
+  }, []);
 
   const handleDrop = useCallback(
     async (e: DragEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      if (disabled) return;
+      if (disabledRef.current) return;
       setIsDragging(false);
       setDragCounter(0);
 
@@ -105,11 +113,11 @@ export const DropZone: FC<DropZoneProps> = ({ onFilesDropped, children, classNam
         allFiles.push(...files);
       }
 
-      if (allFiles.length > 0) {
+      if (allFiles.length > 0 && !disabledRef.current) {
         onFilesDropped(allFiles, allPaths.length > 0 ? allPaths : undefined);
       }
     },
-    [disabled, onFilesDropped]
+    [onFilesDropped]
   );
 
   return (

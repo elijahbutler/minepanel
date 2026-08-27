@@ -468,7 +468,7 @@ export const fr: Record<TranslationKey, string> = {
   serverRunningWarningDesc:
     'Vous pouvez consulter et enregistrer la configuration maintenant. Les changements seront appliqués après le prochain redémarrage. Le réseau, les identifiants RCON, les addons et les fichiers actifs restent en lecture seule.',
   runningTabReadOnlyDesc:
-    'Cette section peut modifier le routage ou les fichiers actifs. Vous pouvez la consulter, mais vous devez arrêter le serveur pour la modifier.',
+    'Cette section peut modifier le routage actif, les modules complémentaires Bedrock ou les fichiers du serveur. Vous pouvez la consulter, mais vous devez arrêter le serveur pour la modifier.',
   unsavedChanges: 'Modifications non enregistrées',
   allChangesSaved: 'Toutes les modifications sont enregistrées',
   failedToFetchVersions: 'Échec de la récupération des versions',

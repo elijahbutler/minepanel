@@ -470,7 +470,7 @@ export const pl: Record<TranslationKey, string> = {
   serverRunningWarningDesc:
     'Możesz teraz przeglądać i zapisywać konfigurację. Zapisane zmiany zostaną zastosowane po następnym restarcie. Routing sieciowy, dane RCON, dodatki i aktywne pliki pozostają tylko do odczytu.',
   runningTabReadOnlyDesc:
-    'Ta sekcja może wpłynąć na aktywny routing lub pliki serwera. Możesz ją przeglądać, ale przed edycją zatrzymaj serwer.',
+    'Ta sekcja może wpłynąć na aktywny routing, dodatki Bedrock lub pliki serwera. Możesz ją przeglądać, ale przed edycją zatrzymaj serwer.',
   unsavedChanges: 'Niezapisane zmiany',
   allChangesSaved: 'Wszystkie zmiany zapisane',
   failedToFetchVersions: 'Nie udało się pobrać wersji',

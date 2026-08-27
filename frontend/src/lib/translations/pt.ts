@@ -469,7 +469,7 @@ export const pt: Record<TranslationKey, string> = {
   serverRunningWarningDesc:
     'Você pode revisar e salvar a configuração agora. As alterações salvas serão aplicadas após a próxima reinicialização. A rede, as credenciais RCON, os addons e os arquivos ativos permanecem somente leitura.',
   runningTabReadOnlyDesc:
-    'Esta seção pode afetar a rede ou os arquivos ativos. Você pode consultá-la agora, mas precisa parar o servidor para editá-la.',
+    'Esta seção pode afetar a rede ativa, os complementos do Bedrock ou os arquivos do servidor. Você pode consultá-la agora, mas precisa parar o servidor para editá-la.',
   unsavedChanges: 'Alterações não Salvas',
   allChangesSaved: 'Todas as Alterações Salvas',
   failedToFetchVersions: 'Erro ao obter as versões',
