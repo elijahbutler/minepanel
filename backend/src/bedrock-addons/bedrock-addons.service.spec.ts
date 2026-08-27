@@ -1,15 +1,18 @@
 import * as fs from 'fs-extra';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ConflictException } from '@nestjs/common';
+import { ServerManagementService } from 'src/server-management/server-management.service';
 import { BedrockAddonsService } from './bedrock-addons.service';
 
 describe('BedrockAddonsService', () => {
   let tempDir: string;
   let service: BedrockAddonsService;
+  let getServerStatus: jest.MockedFunction<ServerManagementService['getServerStatus']>;
 
   beforeEach(async () => {
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'minepanel-bedrock-addons-'));
+    getServerStatus = jest.fn().mockResolvedValue('stopped');
 
     service = new BedrockAddonsService(
       {
@@ -26,6 +29,7 @@ describe('BedrockAddonsService', () => {
       {
         getServerConfig: jest.fn().mockResolvedValue({ id: 'bed', edition: 'BEDROCK' }),
       } as any,
+      { getServerStatus } as unknown as ServerManagementService,
     );
   });
 
@@ -87,6 +91,7 @@ describe('BedrockAddonsService', () => {
       {
         getServerConfig: jest.fn().mockResolvedValue({ id: 'java', edition: 'JAVA' }),
       } as any,
+      { getServerStatus } as unknown as ServerManagementService,
     );
 
     await expect(javaService.clearAddonRuntimeState('java')).rejects.toBeInstanceOf(BadRequestException);
@@ -168,6 +173,19 @@ describe('BedrockAddonsService', () => {
     await expect(service.reorderAddons('bed', ['a1', 'ghost'])).rejects.toBeInstanceOf(BadRequestException);
     await expect(service.reorderAddons('bed', ['a1'])).rejects.toBeInstanceOf(BadRequestException);
     await expect(service.reorderAddons('bed', ['a1', 'a1'])).rejects.toBeInstanceOf(BadRequestException);
+
+    const registry = await fs.readJson(path.join(serverDir, 'addons', 'registry.json'));
+    expect(registry.addons.map((addon: { id: string }) => addon.id)).toEqual(['a1', 'a2']);
+  });
+
+  it.each(['running', 'starting'] as const)('reorderAddons should preserve order while the server is %s', async (status) => {
+    const serverDir = await seedServer('bed', [
+      { id: 'a1', behaviorUuid: 'bp-1' },
+      { id: 'a2', behaviorUuid: 'bp-2' },
+    ]);
+    getServerStatus.mockResolvedValue(status);
+
+    await expect(service.reorderAddons('bed', ['a2', 'a1'])).rejects.toBeInstanceOf(ConflictException);
 
     const registry = await fs.readJson(path.join(serverDir, 'addons', 'registry.json'));
     expect(registry.addons.map((addon: { id: string }) => addon.id)).toEqual(['a1', 'a2']);

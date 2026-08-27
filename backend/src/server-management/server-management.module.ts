@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { DockerComposeModule } from 'src/docker-compose/docker-compose.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ServerManagementController } from './server-management.controller';
@@ -13,7 +13,7 @@ import { AlertsModule } from 'src/alerts/alerts.module';
 import { SettingsModule } from 'src/settings/settings.module';
 
 @Module({
-  imports: [DockerComposeModule, TypeOrmModule.forFeature([Settings]), DiscordModule, UsersModule, ProxyModule, BedrockAddonsModule, AlertsModule, SettingsModule],
+  imports: [DockerComposeModule, TypeOrmModule.forFeature([Settings]), DiscordModule, UsersModule, ProxyModule, forwardRef(() => BedrockAddonsModule), AlertsModule, SettingsModule],
   controllers: [ServerManagementController, AutoScaleController],
   providers: [ServerManagementService],
   exports: [ServerManagementService],
