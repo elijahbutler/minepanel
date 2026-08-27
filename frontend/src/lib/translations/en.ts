@@ -466,7 +466,7 @@ export const en = {
   serverRunningWarningDesc:
     'You can review and save configuration now. Saved changes apply after the next restart. Network routing, RCON credentials, add-ons, and live files stay read-only.',
   runningTabReadOnlyDesc:
-    'This section can affect live routing or server files. You can inspect it now, but stop the server before editing it.',
+    'This section can affect live routing, Bedrock add-ons, or server files. You can inspect it now, but stop the server before editing it.',
   unsavedChanges: 'Unsaved Changes',
   allChangesSaved: 'All Changes Saved',
   failedToFetchVersions: 'Failed to fetch versions',

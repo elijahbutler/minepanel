@@ -61,8 +61,10 @@ export const BedrockAddonsTab: FC<BedrockAddonsTabProps> = ({ serverId, refreshT
 
   const addonsRef = useRef<BedrockAddon[]>([]);
   const lastSyncedOrderRef = useRef<BedrockAddon[]>([]);
+  const readOnlyRef = useRef(readOnly);
   const reorderTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   addonsRef.current = addons;
+  readOnlyRef.current = readOnly;
 
   const isBusy = blockingMessage !== null;
 
@@ -110,7 +112,7 @@ export const BedrockAddonsTab: FC<BedrockAddonsTabProps> = ({ serverId, refreshT
   }, [getErrorMessage, serverId, t]);
 
   const commitOrder = useCallback(async () => {
-    if (readOnly) return;
+    if (readOnlyRef.current) return;
 
     const next = addonsRef.current;
     const previous = lastSyncedOrderRef.current;
@@ -132,17 +134,27 @@ export const BedrockAddonsTab: FC<BedrockAddonsTabProps> = ({ serverId, refreshT
     } finally {
       setReordering(false);
     }
-  }, [getErrorMessage, readOnly, serverId, t]);
+  }, [getErrorMessage, serverId, t]);
 
   const scheduleCommitOrder = useCallback(() => {
+    if (readOnlyRef.current) return;
+
     if (reorderTimerRef.current) {
       clearTimeout(reorderTimerRef.current);
     }
     reorderTimerRef.current = setTimeout(() => {
       reorderTimerRef.current = null;
-      commitOrder();
+      if (!readOnlyRef.current) {
+        commitOrder();
+      }
     }, REORDER_COMMIT_DELAY);
   }, [commitOrder]);
+
+  useEffect(() => {
+    if (!readOnly || !reorderTimerRef.current) return;
+    clearTimeout(reorderTimerRef.current);
+    reorderTimerRef.current = null;
+  }, [readOnly]);
 
   useEffect(() => () => {
     if (reorderTimerRef.current) {
@@ -151,17 +163,17 @@ export const BedrockAddonsTab: FC<BedrockAddonsTabProps> = ({ serverId, refreshT
   }, []);
 
   const handleDragEnd = useCallback(() => {
-    if (readOnly) return;
+    if (readOnlyRef.current) return;
 
     if (reorderTimerRef.current) {
       clearTimeout(reorderTimerRef.current);
       reorderTimerRef.current = null;
     }
     commitOrder();
-  }, [commitOrder, readOnly]);
+  }, [commitOrder]);
 
   const handleMove = useCallback((addon: BedrockAddon, direction: -1 | 1) => {
-    if (readOnly) return;
+    if (readOnlyRef.current) return;
 
     const current = addonsRef.current;
     const index = current.findIndex((item) => item.id === addon.id);
@@ -174,7 +186,7 @@ export const BedrockAddonsTab: FC<BedrockAddonsTabProps> = ({ serverId, refreshT
     [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
     setAddons(next);
     scheduleCommitOrder();
-  }, [readOnly, scheduleCommitOrder]);
+  }, [scheduleCommitOrder]);
 
   useEffect(() => {
     loadAddons();
@@ -484,7 +496,7 @@ export const BedrockAddonsTab: FC<BedrockAddonsTabProps> = ({ serverId, refreshT
                   axis="y"
                   values={addons}
                   onReorder={(next) => {
-                    if (!readOnly) setAddons(next);
+                    if (!readOnlyRef.current) setAddons(next);
                   }}
                   className="space-y-3 max-h-[32rem] overflow-y-auto pr-1"
                 >

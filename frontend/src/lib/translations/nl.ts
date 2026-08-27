@@ -473,7 +473,7 @@ export const nl: Record<TranslationKey, string> = {
   serverRunningWarningDesc:
     'Je kunt de configuratie nu bekijken en opslaan. Opgeslagen wijzigingen worden na de volgende herstart toegepast. Netwerkrouting, RCON-gegevens, add-ons en actieve bestanden blijven alleen-lezen.',
   runningTabReadOnlyDesc:
-    'Deze sectie kan actieve routing of serverbestanden beïnvloeden. Je kunt alles bekijken, maar stop de server voordat je wijzigingen aanbrengt.',
+    'Deze sectie kan actieve routing, Bedrock-add-ons of serverbestanden beïnvloeden. Je kunt alles bekijken, maar stop de server voordat je wijzigingen aanbrengt.',
   unsavedChanges: 'Niet-opgeslagen Wijzigingen',
   allChangesSaved: 'Alle Wijzigingen Opgeslagen',
   failedToFetchVersions: 'Versies ophalen mislukt',

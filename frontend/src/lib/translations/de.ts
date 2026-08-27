@@ -468,7 +468,7 @@ export const de: Record<TranslationKey, string> = {
   serverRunningWarningDesc:
     'Sie können die Konfiguration jetzt ansehen und speichern. Gespeicherte Änderungen werden nach dem nächsten Neustart angewendet. Netzwerk-Routing, RCON-Zugangsdaten, Add-ons und aktive Dateien bleiben schreibgeschützt.',
   runningTabReadOnlyDesc:
-    'Dieser Bereich kann aktives Routing oder Serverdateien beeinflussen. Sie können ihn ansehen, müssen den Server zum Bearbeiten aber stoppen.',
+    'Dieser Bereich kann aktives Routing, Bedrock-Add-ons oder Serverdateien beeinflussen. Sie können ihn ansehen, müssen den Server zum Bearbeiten aber stoppen.',
   unsavedChanges: 'Ungespeicherte Änderungen',
   allChangesSaved: 'Alle Änderungen gespeichert',
   failedToFetchVersions: 'Versionen konnten nicht abgerufen werden',
