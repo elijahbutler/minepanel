@@ -16,6 +16,7 @@ import { ServerStoreService } from 'src/docker-compose/server-store.service';
 import { InstanceSettingsService } from 'src/settings/instance-settings.service';
 import { DockerComposeService } from 'src/docker-compose/docker-compose.service';
 import { getComposeLabel, getComposeLabelFlag } from 'src/common/compose/compose-labels';
+import { MinecraftStatusProbe, parseMinecraftStatus } from './minecraft-status.util';
 import { ServerLifecycleLockService } from './server-lifecycle-lock.service';
 
 const execAsync = promisify(exec);
@@ -59,25 +60,6 @@ export interface ServerRuntimeStats extends ServerResourceInfo {
   uptimeSeconds: number | null;
   version: string | null;
   gameReachable: boolean;
-}
-
-export interface MinecraftStatusProbe {
-  playersOnline: number;
-  playersMax: number;
-  version: string;
-}
-
-export function parseMinecraftStatusOutput(output: string): MinecraftStatusProbe | null {
-  const match = /version=(.*?)\s+online=(\d+)\s+max=(\d+)(?:\s|$)/i.exec(output.trim());
-  if (!match) {
-    return null;
-  }
-
-  return {
-    version: match[1].trim(),
-    playersOnline: Number.parseInt(match[2], 10),
-    playersMax: Number.parseInt(match[3], 10),
-  };
 }
 
 export interface ServerInfo {
@@ -146,6 +128,12 @@ export class ServerManagementService {
   private readonly FORCE_STOP_POLL_ATTEMPTS = 30;
   private readonly FORCE_STOP_POLL_INTERVAL_MS = 500;
   private readonly FORCE_STOP_GRACE_SECONDS = 10;
+
+  // Home (15s) and the server page (10s) both poll runtime stats, often from several
+  // tabs: share one `docker exec` probe per server instead of multiplying them.
+  private readonly STATUS_PROBE_TTL_MS = 8_000;
+  private readonly statusProbeCache = new Map<string, { at: number; value: MinecraftStatusProbe | null }>();
+  private readonly statusProbeInFlight = new Map<string, Promise<MinecraftStatusProbe | null>>();
 
   constructor(
     private readonly configService: ConfigService,
@@ -1067,6 +1055,20 @@ export class ServerManagementService {
   }
 
   async getAllServersResources(): Promise<Record<string, ServerResourceInfo>> {
+    const results = await this.collectServersResources();
+    return results.reduce(
+      (acc, { serverId, data }) => {
+        acc[serverId] = data;
+        return acc;
+      },
+      {} as Record<string, ServerResourceInfo>,
+    );
+  }
+
+  // Resolves status, limits, container id and live stats for every server in one pass.
+  // Both the resources endpoint and the runtime stats endpoint build on this, so the
+  // docker calls behind it are not paid twice.
+  private async collectServersResources(): Promise<Array<{ serverId: string; containerId: string; data: ServerResourceInfo }>> {
     try {
       const directories = await fs.readdir(this.SERVERS_DIR);
       const serverDirectories = await Promise.all(
@@ -1096,6 +1098,7 @@ export class ServerManagementService {
         if (status !== 'running' || !stats) {
           return {
             serverId,
+            containerId,
             data: {
               status,
               cpuUsage: 'N/A',
@@ -1109,6 +1112,7 @@ export class ServerManagementService {
 
         return {
           serverId,
+          containerId,
           data: {
             status,
             cpuUsage: stats.cpuUsage,
@@ -1120,17 +1124,10 @@ export class ServerManagementService {
         };
       });
 
-      const results = await Promise.all(serverDataPromises);
-      return results.reduce(
-        (acc, { serverId, data }) => {
-          acc[serverId] = data;
-          return acc;
-        },
-        {} as Record<string, ServerResourceInfo>,
-      );
+      return await Promise.all(serverDataPromises);
     } catch (error) {
       this.logger.error('Error obtaining all servers resources', error);
-      return {};
+      return [];
     }
   }
 
@@ -1174,56 +1171,100 @@ export class ServerManagementService {
     }
   }
 
-  private async queryMinecraftStatus(containerId: string, edition: ServerEdition): Promise<MinecraftStatusProbe | null> {
-    const internalPort = edition === 'BEDROCK' ? '19132' : '25565';
-    const subcommand = edition === 'BEDROCK' ? 'status-bedrock' : 'status';
-    const args = ['exec', containerId, 'mc-monitor', subcommand, '--host', '127.0.0.1', '--port', internalPort];
-
-    if (edition === 'JAVA') {
-      args.push('--timeout', '3s');
+  private async probeMinecraftStatus(serverId: string, containerId: string, edition: ServerEdition): Promise<MinecraftStatusProbe | null> {
+    const cached = this.statusProbeCache.get(serverId);
+    if (cached && Date.now() - cached.at < this.STATUS_PROBE_TTL_MS) {
+      return cached.value;
     }
 
+    const inFlight = this.statusProbeInFlight.get(serverId);
+    if (inFlight) {
+      return inFlight;
+    }
+
+    const probe = this.runMinecraftStatusProbe(containerId, edition)
+      .then((value) => {
+        this.statusProbeCache.set(serverId, { at: Date.now(), value });
+        return value;
+      })
+      .finally(() => {
+        this.statusProbeInFlight.delete(serverId);
+      });
+
+    this.statusProbeInFlight.set(serverId, probe);
+    return probe;
+  }
+
+  // mc-monitor ships inside the itzg images (it backs their healthcheck), so the probe
+  // works for Java and Bedrock without RCON credentials.
+  private async runMinecraftStatusProbe(containerId: string, edition: ServerEdition): Promise<MinecraftStatusProbe | null> {
+    const isBedrock = edition === 'BEDROCK';
+    const args = [
+      'exec',
+      containerId,
+      'mc-monitor',
+      isBedrock ? 'status-bedrock' : 'status',
+      '--host',
+      '127.0.0.1',
+      '--port',
+      isBedrock ? '19132' : '25565',
+      '--timeout',
+      '3s',
+    ];
+
     try {
-      const { stdout, exitCode } = await this.executeProcess('docker', args, { timeout: 4_000 });
+      const { stdout, exitCode } = await this.executeProcess('docker', args, { timeout: 5_000 });
       if (exitCode !== 0) {
         return null;
       }
-      return parseMinecraftStatusOutput(this.sanitizeCommandOutput(stdout));
+      return parseMinecraftStatus(this.sanitizeCommandOutput(stdout));
     } catch (error) {
       this.logger.debug(`Minecraft status probe failed for container ${containerId}: ${(error as Error).message}`);
       return null;
     }
   }
 
-  private async getContainerUptimeSeconds(containerId: string): Promise<number | null> {
+  // One docker inspect for every container, not one per server.
+  private async getContainersStartedAt(containerIds: string[]): Promise<Record<string, number>> {
+    const ids = containerIds.filter((id) => id);
+    if (ids.length === 0) {
+      return {};
+    }
+
     try {
-      const { stdout, exitCode } = await this.executeProcess(
-        'docker',
-        ['inspect', '--format={{.State.StartedAt}}', containerId],
-        { timeout: 3_000 },
-      );
+      const { stdout, exitCode } = await this.executeProcess('docker', ['inspect', '--format={{.Id}} {{.State.StartedAt}}', ...ids], { timeout: 5_000 });
       if (exitCode !== 0) {
-        return null;
+        return {};
       }
 
-      const startedAt = Date.parse(stdout.trim());
-      const now = Date.now();
-      if (!Number.isFinite(startedAt) || startedAt <= 0 || startedAt > now) {
-        return null;
+      const startedAt: Record<string, number> = {};
+      for (const line of stdout.trim().split('\n')) {
+        const [fullId, rawStartedAt] = line.trim().split(' ');
+        if (!fullId || !rawStartedAt) continue;
+
+        const parsed = Date.parse(rawStartedAt);
+        if (!Number.isFinite(parsed) || parsed <= 0 || parsed > Date.now()) continue;
+
+        // Callers hold short ids, docker inspect answers with the full one.
+        const matchedId = ids.find((id) => fullId.startsWith(id));
+        if (matchedId) {
+          startedAt[matchedId] = parsed;
+        }
       }
-      return Math.floor((now - startedAt) / 1_000);
+      return startedAt;
     } catch (error) {
-      this.logger.debug(`Could not read uptime for container ${containerId}: ${(error as Error).message}`);
-      return null;
+      this.logger.debug(`Could not read container start times: ${(error as Error).message}`);
+      return {};
     }
   }
 
-  private async getRuntimeProbeConfig(serverId: string): Promise<{
-    edition: ServerEdition;
-    playersMax: number | null;
-  }> {
+  private toUptimeSeconds(startedAt: number | undefined): number | null {
+    return startedAt ? Math.floor((Date.now() - startedAt) / 1_000) : null;
+  }
+
+  private async getRuntimeProbeConfig(serverId: string): Promise<{ edition: ServerEdition; playersMax: number | null }> {
     try {
-      const config = await this.composeService.getServerConfig(serverId);
+      const config = await this.store.readConfig(serverId);
       const maxPlayers = Number.parseInt(config?.maxPlayers ?? '', 10);
       return {
         edition: config?.edition === 'BEDROCK' ? 'BEDROCK' : 'JAVA',
@@ -1235,7 +1276,9 @@ export class ServerManagementService {
     }
   }
 
-  private emptyRuntimeStats(resource: ServerResourceInfo): ServerRuntimeStats {
+  // A running container is not a reachable game: keep game values null so the UI never
+  // turns a failed probe into "0 players online".
+  private withoutGameStats(resource: ServerResourceInfo): ServerRuntimeStats {
     return {
       ...resource,
       playersOnline: null,
@@ -1243,6 +1286,17 @@ export class ServerManagementService {
       uptimeSeconds: null,
       version: null,
       gameReachable: false,
+    };
+  }
+
+  private buildRuntimeStats(resource: ServerResourceInfo, probe: MinecraftStatusProbe | null, playersMaxFallback: number | null, uptimeSeconds: number | null): ServerRuntimeStats {
+    return {
+      ...resource,
+      playersOnline: probe?.playersOnline ?? null,
+      playersMax: probe?.playersMax ?? playersMaxFallback,
+      uptimeSeconds,
+      version: probe?.version ?? null,
+      gameReachable: probe !== null,
     };
   }
 
@@ -1257,16 +1311,12 @@ export class ServerManagementService {
     };
 
     if (!this.validateServerId(serverId)) {
-      return this.emptyRuntimeStats(unavailable);
+      return this.withoutGameStats(unavailable);
     }
 
     try {
-      const [status, limits, containerId, probeConfig] = await Promise.all([
-        this.getServerStatus(serverId),
-        this.getServerLimits(serverId),
-        this.findContainerId(serverId),
-        this.getRuntimeProbeConfig(serverId),
-      ]);
+      const [status, limits, containerId, probeConfig] = await Promise.all([this.getServerStatus(serverId), this.getServerLimits(serverId), this.findContainerId(serverId), this.getRuntimeProbeConfig(serverId)]);
+
       const base: ServerResourceInfo = {
         ...unavailable,
         status,
@@ -1275,66 +1325,36 @@ export class ServerManagementService {
       };
 
       if (status !== 'running' || !containerId) {
-        return this.emptyRuntimeStats(base);
+        return this.withoutGameStats(base);
       }
 
-      const [resources, gameStatus, uptimeSeconds] = await Promise.all([
-        this.getServerResources(serverId),
-        this.queryMinecraftStatus(containerId, probeConfig.edition),
-        this.getContainerUptimeSeconds(containerId),
-      ]);
+      const [resources, probe, startedAt] = await Promise.all([this.getServerResources(serverId), this.probeMinecraftStatus(serverId, containerId, probeConfig.edition), this.getContainersStartedAt([containerId])]);
 
-      return {
-        ...base,
-        ...resources,
-        playersOnline: gameStatus?.playersOnline ?? null,
-        playersMax: gameStatus?.playersMax ?? probeConfig.playersMax,
-        uptimeSeconds,
-        version: gameStatus?.version ?? null,
-        gameReachable: gameStatus !== null,
-      };
+      return this.buildRuntimeStats({ ...base, ...resources }, probe, probeConfig.playersMax, this.toUptimeSeconds(startedAt[containerId]));
     } catch (error) {
       this.logger.warn(`Failed to get runtime stats for ${serverId}: ${(error as Error).message}`);
-      return this.emptyRuntimeStats(unavailable);
+      return this.withoutGameStats(unavailable);
     }
   }
 
   async getAllServersRuntimeStats(): Promise<Record<string, ServerRuntimeStats>> {
-    const resources = await this.getAllServersResources();
+    const servers = await this.collectServersResources();
+    const running = servers.filter(({ containerId, data }) => data.status === 'running' && containerId);
+    const startedAt = await this.getContainersStartedAt(running.map(({ containerId }) => containerId));
+
     const entries = await Promise.all(
-      Object.entries(resources).map(async ([serverId, resource]) => {
-        if (resource.status !== 'running') {
-          return [serverId, this.emptyRuntimeStats(resource)] as const;
+      servers.map(async ({ serverId, containerId, data }) => {
+        if (data.status !== 'running' || !containerId) {
+          return [serverId, this.withoutGameStats(data)] as const;
         }
 
         try {
-          const [containerId, probeConfig] = await Promise.all([
-            this.findContainerId(serverId),
-            this.getRuntimeProbeConfig(serverId),
-          ]);
-          if (!containerId) {
-            return [serverId, this.emptyRuntimeStats(resource)] as const;
-          }
-
-          const [gameStatus, uptimeSeconds] = await Promise.all([
-            this.queryMinecraftStatus(containerId, probeConfig.edition),
-            this.getContainerUptimeSeconds(containerId),
-          ]);
-
-          return [
-            serverId,
-            {
-              ...resource,
-              playersOnline: gameStatus?.playersOnline ?? null,
-              playersMax: gameStatus?.playersMax ?? probeConfig.playersMax,
-              uptimeSeconds,
-              version: gameStatus?.version ?? null,
-              gameReachable: gameStatus !== null,
-            },
-          ] as const;
+          const probeConfig = await this.getRuntimeProbeConfig(serverId);
+          const probe = await this.probeMinecraftStatus(serverId, containerId, probeConfig.edition);
+          return [serverId, this.buildRuntimeStats(data, probe, probeConfig.playersMax, this.toUptimeSeconds(startedAt[containerId]))] as const;
         } catch (error) {
           this.logger.warn(`Failed to get runtime stats for ${serverId}: ${(error as Error).message}`);
-          return [serverId, this.emptyRuntimeStats(resource)] as const;
+          return [serverId, this.withoutGameStats(data)] as const;
         }
       }),
     );

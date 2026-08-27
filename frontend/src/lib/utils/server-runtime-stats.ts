@@ -1,4 +1,4 @@
-import { ServerRuntimeStats } from '@/services/docker/fetchs';
+import { ServerResourceInfo, ServerRuntimeStats } from "@/services/docker/fetchs";
 
 function parsePercentage(value: string): number | null {
   const match = value.match(/[\d.]+/);
@@ -19,7 +19,7 @@ function parseMemorySize(value: string): number | null {
   const amount = Number.parseFloat(match[1]);
   const unit = match[2].toUpperCase();
   const multipliers: Record<string, number> = {
-    '': 1,
+    "": 1,
     B: 1,
     K: 1024,
     KB: 1024,
@@ -38,45 +38,37 @@ function parseMemorySize(value: string): number | null {
   return Number.isFinite(amount) && multiplier ? amount * multiplier : null;
 }
 
-export function getServerCpuPercent(stats: ServerRuntimeStats): number | null {
+// CPU usage is reported relative to the host, the limit is a core count:
+// cpuLimit=2 means 200% of a single core is the ceiling.
+export function getCpuPercent(stats: ServerResourceInfo): number | null {
   const usage = parsePercentage(stats.cpuUsage);
   const limit = parseCpuLimit(stats.cpuLimit);
   if (usage === null || limit === null) return null;
   return Math.max(0, (usage / (limit * 100)) * 100);
 }
 
-export function getServerMemoryPercent(stats: ServerRuntimeStats): number | null {
+export function getMemoryPercent(stats: ServerResourceInfo): number | null {
   const usage = parseMemorySize(stats.memoryUsage);
   const limit = parseMemorySize(stats.memoryConfigLimit);
   if (usage === null || limit === null || limit <= 0) return null;
   return Math.max(0, (usage / limit) * 100);
 }
 
-export function formatServerUptime(totalSeconds: number | null): string {
-  if (totalSeconds === null || totalSeconds < 0) return '—';
-  if (totalSeconds < 60) return '<1m';
-
-  const totalMinutes = Math.floor(totalSeconds / 60);
-  const days = Math.floor(totalMinutes / 1_440);
-  const hours = Math.floor((totalMinutes % 1_440) / 60);
-  const minutes = totalMinutes % 60;
-
-  if (days > 0) return `${days}d ${hours}h`;
-  if (hours > 0) return `${hours}h ${minutes}m`;
-  return `${minutes}m`;
+export function getUsageColor(percent: number): string {
+  if (percent >= 90) return "#f05a5a";
+  if (percent >= 70) return "#f5c542";
+  return "#9dff3f";
 }
 
-export function formatPlayerCount(stats: ServerRuntimeStats | null): string {
-  if (!stats) return '…';
+// A failed probe is not an empty server: never render an unknown count as 0.
+export function formatPlayers(stats: ServerRuntimeStats | null): string {
+  if (!stats) return "—";
   if (stats.playersOnline === null) {
-    return stats.playersMax === null ? '—' : `— / ${stats.playersMax}`;
+    return stats.playersMax === null ? "—" : `— / ${stats.playersMax}`;
   }
-  return stats.playersMax === null
-    ? String(stats.playersOnline)
-    : `${stats.playersOnline} / ${stats.playersMax}`;
+  return stats.playersMax === null ? String(stats.playersOnline) : `${stats.playersOnline} / ${stats.playersMax}`;
 }
 
-export function formatPercent(value: number | null, loading = false): string {
-  if (loading) return '…';
-  return value === null ? '—' : `${Math.round(value)}%`;
+export function formatPercent(value: number | null): string {
+  return value === null ? "—" : `${Math.round(value)}%`;
 }

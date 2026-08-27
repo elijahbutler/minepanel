@@ -3,15 +3,12 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Cpu, Activity, Server, AlertTriangle, ArrowRight, Clock3, Users } from "lucide-react";
+import { Cpu, Activity, Server, AlertTriangle, ArrowRight, Clock, Users } from "lucide-react";
 import { getAllServersRuntimeStats, ServerRuntimeStats } from "@/services/docker/fetchs";
 import { useLanguage } from "@/lib/hooks/useLanguage";
-import {
-  formatPlayerCount,
-  formatServerUptime,
-  getServerCpuPercent,
-  getServerMemoryPercent,
-} from "@/lib/utils/server-runtime-stats";
+import { RuntimeChip } from "@/components/molecules/ServerRuntimeChips";
+import { formatPlayers, getCpuPercent, getMemoryPercent, getUsageColor } from "@/lib/utils/server-runtime-stats";
+import { formatUptime } from "@/services/system/system.service";
 
 interface ServerQuickViewProps {
   servers: Array<{ id: string; serverName?: string }>;
@@ -23,7 +20,7 @@ type ServerWithResources = {
   status: "running" | "stopped" | "starting" | "not_found";
   cpuPercent: number;
   memoryPercent: number;
-  runtimeStats: ServerRuntimeStats;
+  stats: ServerRuntimeStats;
 };
 
 export function ServerQuickView({ servers }: ServerQuickViewProps) {
@@ -60,9 +57,9 @@ export function ServerQuickView({ servers }: ServerQuickViewProps) {
           id: server.id,
           name: server.serverName || server.id,
           status: res.status,
-          cpuPercent: getServerCpuPercent(res) ?? 0,
-          memoryPercent: getServerMemoryPercent(res) ?? 0,
-          runtimeStats: res,
+          cpuPercent: getCpuPercent(res) ?? 0,
+          memoryPercent: getMemoryPercent(res) ?? 0,
+          stats: res,
         };
       });
 
@@ -91,13 +88,6 @@ export function ServerQuickView({ servers }: ServerQuickViewProps) {
       default:
         return "bg-red-800/70 text-red-200";
     }
-  };
-
-  // Colors based on percentage of configured limit
-  const getUsageColor = (percent: number) => {
-    if (percent >= 90) return "#f05a5a";
-    if (percent >= 70) return "#f5c542";
-    return "#9dff3f";
   };
 
   const hasHighUsage = (server: ServerWithResources) => server.status === "running" && (server.cpuPercent >= 80 || server.memoryPercent >= 80);
@@ -134,43 +124,37 @@ export function ServerQuickView({ servers }: ServerQuickViewProps) {
                       <span className="font-minecraft text-sm text-white group-hover:text-emerald-400 transition-colors truncate">{server.name}</span>
                       {hasHighUsage(server) && <AlertTriangle className="w-4 h-4 text-yellow-400 animate-pulse shrink-0" />}
                     </div>
-                    <span className={`mc-tag ${getStatusColor(server.status)} text-[10px] px-2 py-0.5 shrink-0`}>{t(server.status)}</span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {server.status === "running" && (
+                        <>
+                          <RuntimeChip icon={Users} label={t("players")} value={formatPlayers(server.stats)} color="#9dff3f" className="hidden sm:flex" />
+                          <RuntimeChip icon={Clock} label={t("uptime")} value={server.stats.uptimeSeconds === null ? "—" : formatUptime(server.stats.uptimeSeconds)} color="#6fe3d4" className="hidden md:flex" />
+                        </>
+                      )}
+                      <span className={`mc-tag ${getStatusColor(server.status)} text-[10px] px-2 py-0.5 shrink-0`}>{t(server.status)}</span>
+                    </div>
                   </div>
 
                   {server.status === "running" && (
-                    <div className="mt-2 space-y-2">
-                      <div className="grid grid-cols-2 gap-2 text-xs text-gray-300">
-                        <div className="mc-tag flex min-w-0 items-center gap-1.5 px-2 py-1">
-                          <Users className="h-3 w-3 shrink-0 text-emerald-300" />
-                          <span className="font-minecraft text-[10px] text-gray-400">{t("players")}</span>
-                          <span className="ml-auto truncate font-mono text-white">{formatPlayerCount(server.runtimeStats)}</span>
+                    <div className="grid grid-cols-2 gap-3 mt-2">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1 text-xs text-gray-400 font-minecraft">
+                          <Cpu className="w-3 h-3" />
+                          <span>CPU</span>
+                          <span className="ml-auto font-mono">{server.cpuPercent.toFixed(0)}%</span>
                         </div>
-                        <div className="mc-tag flex min-w-0 items-center gap-1.5 px-2 py-1">
-                          <Clock3 className="h-3 w-3 shrink-0 text-cyan-300" />
-                          <span className="font-minecraft text-[10px] text-gray-400">{t("uptime")}</span>
-                          <span className="ml-auto truncate font-mono text-white">{formatServerUptime(server.runtimeStats.uptimeSeconds)}</span>
+                        <div className="mc-bar h-2.5">
+                          <div className="mc-bar__fill" style={{ width: `${Math.min(server.cpuPercent, 100)}%`, backgroundColor: getUsageColor(server.cpuPercent) }} />
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-1 text-xs text-gray-400 font-minecraft">
-                            <Cpu className="w-3 h-3" />
-                            <span>{t("cpu")}</span>
-                            <span className="ml-auto font-mono">{server.cpuPercent.toFixed(0)}%</span>
-                          </div>
-                          <div className="mc-bar h-2.5">
-                            <div className="mc-bar__fill" style={{ width: `${Math.min(server.cpuPercent, 100)}%`, backgroundColor: getUsageColor(server.cpuPercent) }} />
-                          </div>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1 text-xs text-gray-400 font-minecraft">
+                          <Activity className="w-3 h-3" />
+                          <span>RAM</span>
+                          <span className="ml-auto font-mono">{server.memoryPercent.toFixed(0)}%</span>
                         </div>
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-1 text-xs text-gray-400 font-minecraft">
-                            <Activity className="w-3 h-3" />
-                            <span>{t("memory")}</span>
-                            <span className="ml-auto font-mono">{server.memoryPercent.toFixed(0)}%</span>
-                          </div>
-                          <div className="mc-bar h-2.5">
-                            <div className="mc-bar__fill" style={{ width: `${Math.min(server.memoryPercent, 100)}%`, backgroundColor: getUsageColor(server.memoryPercent) }} />
-                          </div>
+                        <div className="mc-bar h-2.5">
+                          <div className="mc-bar__fill" style={{ width: `${Math.min(server.memoryPercent, 100)}%`, backgroundColor: getUsageColor(server.memoryPercent) }} />
                         </div>
                       </div>
                     </div>

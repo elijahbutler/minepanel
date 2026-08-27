@@ -575,8 +575,8 @@ export class ServerManagementController {
   @Get(':id/runtime-stats')
   async getServerRuntimeStats(@Request() req, @Param('id') id: string) {
     await this.requireServerAccess(req, id);
-    const server = await this.dockerComposeService.getServerConfig(id);
-    if (!server) {
+    const serverExists = await this.dockerComposeService.getServerConfig(id);
+    if (!serverExists) {
       throw new NotFoundException(`Server with ID "${id}" not found`);
     }
     return this.managementService.getServerRuntimeStats(id);

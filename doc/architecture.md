@@ -51,7 +51,7 @@ Backend communicates via `/var/run/docker.sock` to:
 - Read logs
 - Execute commands (RCON)
 - Monitor resources
-- Read container start time for per-server uptime
+- Read container start time (`.State.StartedAt`) for per-server uptime
 - Run the bundled `mc-monitor` probe inside Java and Bedrock containers for player totals and version
 
 ## Data Flow

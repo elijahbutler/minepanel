@@ -33,8 +33,6 @@ describe('ServerManagementController', () => {
       executeCommand: jest.fn(),
       getServerResources: jest.fn(),
       getAllServersResources: jest.fn(),
-      getServerRuntimeStats: jest.fn(),
-      getAllServersRuntimeStats: jest.fn(),
       getOnlinePlayers: jest.fn(),
       getWhitelist: jest.fn(),
       getOps: jest.fn(),
@@ -131,33 +129,6 @@ describe('ServerManagementController', () => {
       const result = await controller.getAllServersStatus();
 
       expect(result).toEqual(mockStatus);
-    });
-  });
-
-  describe('getAllServersRuntimeStats', () => {
-    it('returns stats only for servers visible to the current user', async () => {
-      const runtimeStats = {
-        status: 'running' as const,
-        cpuUsage: '12%',
-        memoryUsage: '1GiB',
-        memoryLimit: '4GiB',
-        cpuLimit: '2',
-        memoryConfigLimit: '4G',
-        playersOnline: 2,
-        playersMax: 20,
-        uptimeSeconds: 3_600,
-        version: '1.21.4',
-        gameReachable: true,
-      };
-      serverService.getAllServersRuntimeStats.mockResolvedValue({
-        visible: runtimeStats,
-        hidden: runtimeStats,
-      });
-      accessControlService.getVisibleServerIds.mockReturnValue(['visible']);
-
-      const result = await controller.getAllServersRuntimeStats({ user: { userId: 1 } });
-
-      expect(result).toEqual({ visible: runtimeStats });
     });
   });
 
