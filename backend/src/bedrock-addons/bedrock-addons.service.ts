@@ -15,6 +15,7 @@ import * as AdmZip from 'adm-zip';
 import * as fs from 'fs-extra';
 import * as path from 'node:path';
 import { DockerComposeService } from 'src/docker-compose/docker-compose.service';
+import { ServerLifecycleLockService } from 'src/server-management/server-lifecycle-lock.service';
 import { ServerManagementService } from 'src/server-management/server-management.service';
 import { SettingsService } from 'src/users/services/settings.service';
 import { ImportBedrockAddonDto } from './dto/import-bedrock-addon.dto';
@@ -75,6 +76,7 @@ export class BedrockAddonsService {
     private readonly dockerComposeService: DockerComposeService,
     @Inject(forwardRef(() => ServerManagementService))
     private readonly serverManagementService: ServerManagementService,
+    private readonly lifecycleLock: ServerLifecycleLockService,
   ) {
     this.SERVERS_DIR = this.configService.get<string>('serversDir');
     fs.ensureDirSync(this.SERVERS_DIR);
@@ -265,6 +267,10 @@ export class BedrockAddonsService {
   }
 
   async reorderAddons(serverId: string, addonIds: string[]) {
+    return this.lifecycleLock.runExclusive(serverId, () => this.reorderAddonsUnlocked(serverId, addonIds));
+  }
+
+  private async reorderAddonsUnlocked(serverId: string, addonIds: string[]) {
     await this.ensureServerDirectories(serverId);
     await this.assertServerStoppedForReorder(serverId);
     const registry = await this.readRegistry(serverId);

@@ -35,6 +35,7 @@ npm run test:e2e
 ## Main Modules
 
 - `src/server-management/` - server lifecycle and runtime actions
+- `src/server-management/server-lifecycle-lock.service.ts` - per-server serialization for startup, restart, and protected data mutations
 - `src/docker-compose/` - compose generation
 - `src/files/` - file operations
 - `src/auth/` - authentication

@@ -20,6 +20,7 @@ backend/src/
 |  |- oidc/                 OpenID Connect SSO (provider-agnostic) -> issues Minepanel session
 |- server-management/       Runtime control, status, logs, commands
 |  |- strategies/           Java/Bedrock strategy pattern
+|  |- server-lifecycle-lock.service.ts  Per-server start/restart and data-mutation serialization
 |- docker-compose/          Compose generation and server config persistence
 |- files/                   File browser API over server directories
 |- world-discovery/         World import/discovery into global world library
@@ -131,6 +132,7 @@ Path and filesystem patterns (critical):
 - `src/config.ts` - source of `serversDir`, `serversHostDir` and `dataHostDir` behavior.
 - `src/main.ts` - CORS/cookies/bootstrap behavior.
 - `src/server-management/server-management.service.ts` - lifecycle, status, command execution, world selection.
+- `src/server-management/server-lifecycle-lock.service.ts` - serializes operations that must not overlap server startup or restart. Keep the status check and protected writes inside one `runExclusive` callback.
 - `src/server-management/strategies/server-strategy.factory.ts` - Java/Bedrock strategy selection.
 - `src/docker-compose/docker-compose.service.ts` - compose generation, path-to-volume mapping, server discovery.
 - `src/files/files.service.ts` - path validation and file API boundaries.
