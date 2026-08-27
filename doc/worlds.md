@@ -55,18 +55,18 @@ does not turn into a broken entry.
 The server's **Worlds** tab lists both libraries, with a search across them and a
 badge saying whether that world has already been copied into the server.
 
-::: warning The server has to be stopped
-Like every other configuration tab, **Worlds** is disabled while the server is
-running. Swapping the world underneath a live server means the running one is
-still holding files it is about to lose. Stop the server, pick the world, start it
-again.
+::: warning A running world is never swapped in place
+You can open **Worlds** and save a selection while the server is running. Minepanel
+stores the choice for the next restart and leaves the active world alone. The copy
+and world change happen only after the server stops as part of that restart.
 :::
 
-1. Stop the server.
-2. Open **Worlds** and pick a world. The **level name** is filled in from the
+1. Open **Worlds** and pick a world. The **level name** is filled in from the
    world's own name — that is the folder it will live in under `mc-data/`, and what
    `level-name` in `server.properties` points at.
-3. Apply, then start the server. The copy happens on that start.
+2. Save the selection. If the server is running, keep operating it until you are
+   ready for the restart.
+3. Restart or start the server. The copy happens during that start.
 
 **Already copied** on a world means `mc-data/<level-name>/level.dat` exists. From
 then on the server plays that copy; the library still holds the pristine original.

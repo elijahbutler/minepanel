@@ -471,7 +471,9 @@ export const nl: Record<TranslationKey, string> = {
   autoSaveActive: 'Actief',
   serverRunningWarning: 'Server is Actief',
   serverRunningWarningDesc:
-    'Configuratie kan niet worden bewerkt terwijl de server actief is. Stop de server om wijzigingen aan te brengen.',
+    'Je kunt de configuratie nu bekijken en opslaan. Opgeslagen wijzigingen worden na de volgende herstart toegepast. Netwerkrouting, RCON-gegevens, add-ons en actieve bestanden blijven alleen-lezen.',
+  runningTabReadOnlyDesc:
+    'Deze sectie kan actieve routing, Bedrock-add-ons of serverbestanden beïnvloeden. Je kunt alles bekijken, maar stop de server voordat je wijzigingen aanbrengt.',
   unsavedChanges: 'Niet-opgeslagen Wijzigingen',
   allChangesSaved: 'Alle Wijzigingen Opgeslagen',
   failedToFetchVersions: 'Versies ophalen mislukt',
@@ -1758,6 +1760,7 @@ export const nl: Record<TranslationKey, string> = {
   worldsEmpty:
     'Geen werelden gevonden. Upload een map (met level.dat) of ZIP/TAR naar lokaal servers/<id>/worlds of naar de Wereldbibliotheek.',
   worldsRestartNoticeStopped: 'De server is gestopt. De geselecteerde wereld wordt toegepast bij de volgende start.',
+  worldsRestartNoticeRunning: 'De actieve wereld wordt niet gewijzigd. Sla deze selectie nu op om ze na de volgende herstart toe te passen.',
   allLabel: 'Alles',
   worldSourceLocal: 'Lokaal',
   worldSourceLibrary: 'Wereldbibliotheek',

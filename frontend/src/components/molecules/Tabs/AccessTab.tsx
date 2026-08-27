@@ -27,9 +27,10 @@ import { useLanguage } from '@/lib/hooks/useLanguage';
 interface AccessTabProps {
   config: ServerConfig;
   updateConfig: <K extends keyof ServerConfig>(field: K, value: ServerConfig[K]) => void;
+  readOnlyRcon?: boolean;
 }
 
-export const AccessTab: FC<AccessTabProps> = ({ config, updateConfig }) => {
+export const AccessTab: FC<AccessTabProps> = ({ config, updateConfig, readOnlyRcon = false }) => {
   const { t } = useLanguage();
   const isJava = config.edition !== 'BEDROCK';
   const isBedrock = config.edition === 'BEDROCK';
@@ -299,6 +300,7 @@ export const AccessTab: FC<AccessTabProps> = ({ config, updateConfig }) => {
                       id="enableRcon"
                       checked={config.enableRcon !== false}
                       onCheckedChange={(checked) => updateConfig('enableRcon', checked)}
+                      disabled={readOnlyRcon}
                     />
                   </div>
                   <p className="text-xs text-gray-400">{t('enableRconDesc')}</p>
@@ -325,6 +327,7 @@ export const AccessTab: FC<AccessTabProps> = ({ config, updateConfig }) => {
                         type="number"
                         value={config.rconPort || 25575}
                         onChange={(e) => updateConfig('rconPort', String(e.target.value))}
+                        disabled={readOnlyRcon}
                         placeholder="25575"
                         className="bg-gray-800/70 border-gray-700/50 focus:border-emerald-500/50 focus:ring-emerald-500/30"
                       />
@@ -339,6 +342,7 @@ export const AccessTab: FC<AccessTabProps> = ({ config, updateConfig }) => {
                         type="password"
                         value={config.rconPassword || ''}
                         onChange={(e) => updateConfig('rconPassword', e.target.value)}
+                        disabled={readOnlyRcon}
                         className="bg-gray-800/70 border-gray-700/50 focus:border-emerald-500/50 focus:ring-emerald-500/30"
                       />
                       <p className="text-xs text-red-400 font-medium">
@@ -365,6 +369,7 @@ export const AccessTab: FC<AccessTabProps> = ({ config, updateConfig }) => {
                           id="broadcastRconToOps"
                           checked={config.broadcastRconToOps || false}
                           onCheckedChange={(checked) => updateConfig('broadcastRconToOps', checked)}
+                          disabled={readOnlyRcon}
                         />
                       </div>
                       <p className="text-xs text-gray-400">{t('broadcastRconToOpsDesc')}</p>

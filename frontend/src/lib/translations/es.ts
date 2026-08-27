@@ -467,7 +467,9 @@ export const es: Record<TranslationKey, string> = {
   autoSaveActive: 'Activo',
   serverRunningWarning: 'Servidor en Ejecución',
   serverRunningWarningDesc:
-    'No se puede editar la configuración mientras el servidor está corriendo. Detén el servidor para hacer cambios.',
+    'Puedes revisar y guardar la configuración ahora. Los cambios se aplicarán después del próximo reinicio. La red, las credenciales RCON, los addons y los archivos activos permanecen en modo de solo lectura.',
+  runningTabReadOnlyDesc:
+    'Esta sección puede afectar la red activa, los complementos de Bedrock o los archivos del servidor. Puedes revisarla ahora, pero debes detener el servidor para editarla.',
   unsavedChanges: 'Cambios sin Guardar',
   allChangesSaved: 'Todos los Cambios Guardados',
   failedToFetchVersions: 'Error al obtener las versiones',
@@ -1749,6 +1751,7 @@ export const es: Record<TranslationKey, string> = {
   worldsEmpty:
     'No se encontraron mundos. Sube una carpeta (con level.dat) o ZIP/TAR a servers/<id>/worlds local o a la Biblioteca de mundos.',
   worldsRestartNoticeStopped: 'El servidor está detenido. El mundo seleccionado se aplicará en el próximo inicio.',
+  worldsRestartNoticeRunning: 'El mundo activo no se modificará. Guarda la selección ahora y se aplicará después del próximo reinicio.',
   allLabel: 'Todos',
   worldSourceLocal: 'Local',
   worldSourceLibrary: 'Biblioteca de mundos',

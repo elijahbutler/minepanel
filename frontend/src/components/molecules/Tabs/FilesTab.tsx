@@ -3,14 +3,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useLanguage } from "@/lib/hooks/useLanguage";
 import Image from "next/image";
 import { FileBrowser } from "@/components/molecules/FileBrowser";
-import { BookOpen } from "lucide-react";
+import { AlertCircle, BookOpen } from "lucide-react";
 import { LINK_FILE_MANAGEMENT } from "@/lib/providers/constants";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface FilesTabProps {
   serverId: string;
+  readOnly?: boolean;
 }
 
-export const FilesTab: FC<FilesTabProps> = ({ serverId }) => {
+export const FilesTab: FC<FilesTabProps> = ({ serverId, readOnly = false }) => {
   const { t } = useLanguage();
 
   return (
@@ -32,7 +34,13 @@ export const FilesTab: FC<FilesTabProps> = ({ serverId }) => {
       </CardHeader>
 
       <CardContent>
-        <FileBrowser serverId={serverId} />
+        {readOnly && (
+          <Alert className="mb-4 bg-amber-900/30 border-amber-800 text-amber-200">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{t("runningTabReadOnlyDesc")}</AlertDescription>
+          </Alert>
+        )}
+        <FileBrowser serverId={serverId} readOnly={readOnly} />
       </CardContent>
     </Card>
   );

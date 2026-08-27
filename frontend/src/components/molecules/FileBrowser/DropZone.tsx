@@ -1,6 +1,6 @@
 "use client";
 
-import { FC, useState, useCallback, DragEvent } from "react";
+import { DragEvent, FC, useCallback, useEffect, useRef, useState } from "react";
 import { Upload } from "lucide-react";
 import { useLanguage } from "@/lib/hooks/useLanguage";
 import { cn } from "@/lib/utils";
@@ -9,6 +9,7 @@ interface DropZoneProps {
   onFilesDropped: (files: File[], relativePaths?: string[]) => void;
   children: React.ReactNode;
   className?: string;
+  disabled?: boolean;
 }
 
 async function traverseDirectory(entry: FileSystemEntry, basePath: string = ""): Promise<{ file: File; path: string }[]> {
@@ -37,14 +38,23 @@ async function traverseDirectory(entry: FileSystemEntry, basePath: string = ""):
   return results;
 }
 
-export const DropZone: FC<DropZoneProps> = ({ onFilesDropped, children, className }) => {
+export const DropZone: FC<DropZoneProps> = ({ onFilesDropped, children, className, disabled = false }) => {
   const { t } = useLanguage();
   const [isDragging, setIsDragging] = useState(false);
   const [dragCounter, setDragCounter] = useState(0);
+  const disabledRef = useRef(disabled);
+  disabledRef.current = disabled;
+
+  useEffect(() => {
+    if (!disabled) return;
+    setIsDragging(false);
+    setDragCounter(0);
+  }, [disabled]);
 
   const handleDragEnter = useCallback((e: DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (disabledRef.current) return;
     setDragCounter((prev) => prev + 1);
     if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
       setIsDragging(true);
@@ -54,6 +64,7 @@ export const DropZone: FC<DropZoneProps> = ({ onFilesDropped, children, classNam
   const handleDragLeave = useCallback((e: DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (disabledRef.current) return;
     setDragCounter((prev) => {
       const newCount = prev - 1;
       if (newCount === 0) {
@@ -66,12 +77,14 @@ export const DropZone: FC<DropZoneProps> = ({ onFilesDropped, children, classNam
   const handleDragOver = useCallback((e: DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (disabledRef.current) return;
   }, []);
 
   const handleDrop = useCallback(
     async (e: DragEvent) => {
       e.preventDefault();
       e.stopPropagation();
+      if (disabledRef.current) return;
       setIsDragging(false);
       setDragCounter(0);
 
@@ -100,7 +113,7 @@ export const DropZone: FC<DropZoneProps> = ({ onFilesDropped, children, classNam
         allFiles.push(...files);
       }
 
-      if (allFiles.length > 0) {
+      if (allFiles.length > 0 && !disabledRef.current) {
         onFilesDropped(allFiles, allPaths.length > 0 ? allPaths : undefined);
       }
     },
@@ -114,7 +127,7 @@ export const DropZone: FC<DropZoneProps> = ({ onFilesDropped, children, classNam
       {isDragging && (
         <div className="absolute inset-0 z-40 flex items-center justify-center bg-emerald-900/80 backdrop-blur-sm border-2 border-dashed border-emerald-400 rounded-lg select-none">
           <div className="flex flex-col items-center gap-3 text-emerald-300">
-            <Upload className="h-12 w-12 animate-bounce" />
+            <Upload className="h-12 w-12" />
             <p className="text-lg font-minecraft">{t("dropFilesHere")}</p>
             <p className="text-sm text-emerald-400/70">{t("releaseToUpload")}</p>
           </div>

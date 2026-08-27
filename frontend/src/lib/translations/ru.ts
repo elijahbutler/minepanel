@@ -466,7 +466,9 @@ export const ru: Record<TranslationKey, string> = {
   autoSaveActive: 'Активно',
   serverRunningWarning: 'Сервер запущен',
   serverRunningWarningDesc:
-    'Конфигурацию нельзя изменить во время работы сервера. Остановите сервер, чтобы внести изменения.',
+    'Сейчас конфигурацию можно просматривать и сохранять. Сохранённые изменения применятся после следующего перезапуска. Сетевые настройки, данные RCON, дополнения и активные файлы останутся только для чтения.',
+  runningTabReadOnlyDesc:
+    'Этот раздел может повлиять на активную маршрутизацию, дополнения Bedrock или файлы сервера. Его можно просматривать, но для редактирования сервер нужно остановить.',
   unsavedChanges: 'Несохранённые изменения',
   allChangesSaved: 'Все изменения сохранены',
   failedToFetchVersions: 'Не удалось получить версии',
@@ -1725,6 +1727,7 @@ export const ru: Record<TranslationKey, string> = {
   worldsLoadError: 'Ошибка загрузки доступных миров',
   worldsEmpty: 'Миры не найдены. Загрузите папку с level.dat или ZIP/TAR в local servers/<id>/worlds либо World Library.',
   worldsRestartNoticeStopped: 'Сервер остановлен. Выбранный мир будет применён при следующем запуске.',
+  worldsRestartNoticeRunning: 'Активный мир не изменится. Сохраните выбор сейчас, чтобы применить его после следующего перезапуска.',
   allLabel: 'Все',
   worldSourceLocal: 'Локальный',
   worldSourceLibrary: 'Библиотека миров',

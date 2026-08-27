@@ -14,9 +14,11 @@ interface WorldsTabProps {
   serverId: string;
   config: ServerConfig;
   updateConfig: <K extends keyof ServerConfig>(field: K, value: ServerConfig[K]) => void;
+  serverRunning?: boolean;
+  onConfigSaved?: (config: ServerConfig) => void;
 }
 
-export const WorldsTab: FC<WorldsTabProps> = ({ serverId, config, updateConfig }) => {
+export const WorldsTab: FC<WorldsTabProps> = ({ serverId, config, updateConfig, serverRunning = false, onConfigSaved }) => {
   const { t } = useLanguage();
   const [worlds, setWorlds] = useState<AvailableWorld[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,7 +80,7 @@ export const WorldsTab: FC<WorldsTabProps> = ({ serverId, config, updateConfig }
         worldScope: selectedScope,
         worldLevelName: trimmedLevelName,
         forceWorldCopy,
-        restartIfRunning: true,
+        restartIfRunning: !serverRunning,
       });
 
       updateConfig("worldSource", result.config.worldSource ?? selectedSource);
@@ -86,6 +88,7 @@ export const WorldsTab: FC<WorldsTabProps> = ({ serverId, config, updateConfig }
       updateConfig("worldLevelName", result.config.worldLevelName ?? trimmedLevelName);
       updateConfig("forceWorldCopy", result.config.forceWorldCopy ?? forceWorldCopy);
       updateConfig("cfSetLevelFrom", "");
+      onConfigSaved?.({ ...config, ...result.config });
 
       mcToast.success(result.restarted ? t("worldAppliedAndRestarted") : t("worldApplied"));
       await loadWorlds();
@@ -178,7 +181,7 @@ export const WorldsTab: FC<WorldsTabProps> = ({ serverId, config, updateConfig }
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="text-xs text-amber-300 bg-amber-900/20 border border-amber-700/50 rounded-md px-3 py-2">
-          {t("worldsRestartNoticeStopped")}
+          {serverRunning ? t("worldsRestartNoticeRunning") : t("worldsRestartNoticeStopped")}
         </div>
 
         <div className="relative min-w-0">
@@ -256,7 +259,7 @@ export const WorldsTab: FC<WorldsTabProps> = ({ serverId, config, updateConfig }
         </div>
 
         <Button type="button" onClick={handleApply} disabled={saving || loading || worlds.length === 0} className="bg-emerald-600 hover:bg-emerald-700 text-white border border-emerald-500/40">
-          {saving ? t("saving") : t("applyWorldAndRestart")}
+          {saving ? t("saving") : serverRunning ? t("saveChanges") : t("applyWorldAndRestart")}
         </Button>
       </CardContent>
     </Card>
