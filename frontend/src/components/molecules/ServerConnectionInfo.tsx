@@ -41,7 +41,7 @@ export function ServerConnectionInfo({ port, serverId, edition }: ServerConnecti
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
   const [publicIP, setPublicIP] = useState<string | null>(null);
   const [localIPs, setLocalIPs] = useState<string[]>([]);
-  const [proxyHostname, setProxyHostname] = useState<string | null>(null);
+  const [proxyAddress, setProxyAddress] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -51,7 +51,7 @@ export function ServerConnectionInfo({ port, serverId, edition }: ServerConnecti
       setIsLoading(true);
       setPublicIP(null);
       setLocalIPs([]);
-      setProxyHostname(null);
+      setProxyAddress(null);
 
       try {
         const [ipData, proxyStatus] = await Promise.all([getAllIPs(), getProxyStatus()]);
@@ -60,11 +60,15 @@ export function ServerConnectionInfo({ port, serverId, edition }: ServerConnecti
           supportsProxy && proxyStatus.enabled && proxyStatus.baseDomain
             ? await getServerProxyHostname(serverId)
             : null;
+        const address =
+          hostname && proxyStatus.proxyPort && proxyStatus.proxyPort !== "25565"
+            ? formatDirectAddress(hostname, proxyStatus.proxyPort)
+            : hostname;
 
         if (!cancelled) {
           setPublicIP(ipData.publicIP);
           setLocalIPs(ipData.localIPs);
-          setProxyHostname(hostname);
+          setProxyAddress(address);
         }
       } catch (error) {
         console.error("Error fetching server addresses:", error);
@@ -83,11 +87,11 @@ export function ServerConnectionInfo({ port, serverId, edition }: ServerConnecti
   const addresses = useMemo<ConnectionAddress[]>(() => {
     const options: ConnectionAddress[] = [];
 
-    if (proxyHostname) {
+    if (proxyAddress) {
       options.push({
         id: "proxy",
         label: t("proxyAddress"),
-        address: proxyHostname,
+        address: proxyAddress,
         icon: Network,
       });
     }
@@ -114,7 +118,7 @@ export function ServerConnectionInfo({ port, serverId, edition }: ServerConnecti
     });
 
     return options;
-  }, [localIPs, port, proxyHostname, publicIP, t]);
+  }, [localIPs, port, proxyAddress, publicIP, t]);
 
   const preferredAddress = addresses[0];
 
