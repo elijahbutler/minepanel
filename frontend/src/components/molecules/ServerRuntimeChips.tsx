@@ -38,7 +38,7 @@ export function ServerRuntimeChips({ serverId, serverStatus }: ServerRuntimeChip
   const memoryPercent = stats ? getMemoryPercent(stats) : null;
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="-mx-1 flex min-w-0 flex-nowrap items-center gap-1.5 overflow-x-auto px-1 pb-1">
       <RuntimeChip icon={Tag} label={t("version")} value={stats?.version || "—"} color="#7fb2ff" />
       <RuntimeChip icon={Users} label={t("players")} value={formatPlayers(stats)} color="#9dff3f" />
       <RuntimeChip icon={Clock} label={t("uptime")} value={stats?.uptimeSeconds === null || stats?.uptimeSeconds === undefined ? "—" : formatUptime(stats.uptimeSeconds)} color="#6fe3d4" />

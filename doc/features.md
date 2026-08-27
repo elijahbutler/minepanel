@@ -50,6 +50,9 @@ running servers. Player totals and version come from a game status query that wo
 and Bedrock. If the container is up but the game is not answering yet, those values stay blank
 instead of reporting zero players.
 
+On a running server, the compact header address menu lists the configured proxy hostname first,
+followed by public and LAN addresses.
+
 ## Server Control
 
 | Feature        | Description                                               |
