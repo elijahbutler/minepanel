@@ -151,9 +151,11 @@ export const BedrockAddonsTab: FC<BedrockAddonsTabProps> = ({ serverId, refreshT
   }, [commitOrder]);
 
   useEffect(() => {
-    if (!readOnly || !reorderTimerRef.current) return;
-    clearTimeout(reorderTimerRef.current);
-    reorderTimerRef.current = null;
+    if (!readOnly) return;
+    if (reorderTimerRef.current) {
+      clearTimeout(reorderTimerRef.current);
+      reorderTimerRef.current = null;
+    }
     setAddons(lastSyncedOrderRef.current);
   }, [readOnly]);
 
