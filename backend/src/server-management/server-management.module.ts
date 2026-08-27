@@ -11,11 +11,12 @@ import { BedrockAddonsModule } from 'src/bedrock-addons/bedrock-addons.module';
 import { Settings } from 'src/users/entities/settings.entity';
 import { AlertsModule } from 'src/alerts/alerts.module';
 import { SettingsModule } from 'src/settings/settings.module';
+import { ServerLifecycleLockService } from './server-lifecycle-lock.service';
 
 @Module({
   imports: [DockerComposeModule, TypeOrmModule.forFeature([Settings]), DiscordModule, UsersModule, ProxyModule, forwardRef(() => BedrockAddonsModule), AlertsModule, SettingsModule],
   controllers: [ServerManagementController, AutoScaleController],
-  providers: [ServerManagementService],
-  exports: [ServerManagementService],
+  providers: [ServerManagementService, ServerLifecycleLockService],
+  exports: [ServerManagementService, ServerLifecycleLockService],
 })
 export class ServerManagementModule {}

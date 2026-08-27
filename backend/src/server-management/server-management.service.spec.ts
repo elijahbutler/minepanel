@@ -36,6 +36,7 @@ import { AlertsService } from '../alerts/alerts.service';
 import { ServerStoreService } from '../docker-compose/server-store.service';
 import { DockerComposeService } from '../docker-compose/docker-compose.service';
 import { InstanceSettingsService } from '../settings/instance-settings.service';
+import { ServerLifecycleLockService } from './server-lifecycle-lock.service';
 import * as fs from 'fs-extra';
 
 // Get the mocked promisify result
@@ -64,6 +65,7 @@ describe('parseMinecraftStatusOutput', () => {
 });
 
 describe('ServerManagementService', () => {
+  let module: TestingModule;
   let service: ServerManagementService;
 
   const SERVERS_DIR = '/app/servers';
@@ -94,7 +96,7 @@ describe('ServerManagementService', () => {
     (fs.ensureDirSync as jest.Mock).mockImplementation(() => {});
     (fs.pathExists as jest.Mock).mockResolvedValue(true);
 
-    const module: TestingModule = await Test.createTestingModule({
+    module = await Test.createTestingModule({
       providers: [
         ServerManagementService,
         { provide: ConfigService, useValue: mockConfigService },
@@ -103,6 +105,7 @@ describe('ServerManagementService', () => {
         { provide: AlertsService, useValue: mockAlertsService },
         { provide: ServerStoreService, useValue: { removeFromIndex: jest.fn().mockResolvedValue(undefined) } },
         { provide: DockerComposeService, useValue: { refreshComposeFile: jest.fn().mockResolvedValue(true) } },
+        ServerLifecycleLockService,
         {
           provide: InstanceSettingsService,
           useValue: {
@@ -208,6 +211,32 @@ describe('ServerManagementService', () => {
   });
 
   describe('startServer', () => {
+    it('waits for an existing per-server lifecycle operation before startup', async () => {
+      const lifecycleLock = module.get(ServerLifecycleLockService);
+      let releaseLock!: () => void;
+      const canReleaseLock = new Promise<void>((resolve) => {
+        releaseLock = resolve;
+      });
+      let markLockHeld!: () => void;
+      const lockHeld = new Promise<void>((resolve) => {
+        markLockHeld = resolve;
+      });
+      const lockOwner = lifecycleLock.runExclusive('myserver', async () => {
+        markLockHeld();
+        await canReleaseLock;
+      });
+      await lockHeld;
+      (fs.pathExists as jest.Mock).mockResolvedValue(false);
+
+      const start = service.startServer('myserver');
+      expect(fs.pathExists).not.toHaveBeenCalled();
+
+      releaseLock();
+      await lockOwner;
+      await expect(start).resolves.toBe(false);
+      expect(fs.pathExists).toHaveBeenCalledWith('/app/servers/myserver/docker-compose.yml');
+    });
+
     it('should fail for invalid server ID', async () => {
       const result = await service.startServer('invalid;id');
       expect(result).toBe(false);
@@ -240,6 +269,8 @@ describe('ServerManagementService', () => {
 
   describe('restartServer', () => {
     it('should restart server successfully', async () => {
+      const lifecycleLock = module.get(ServerLifecycleLockService);
+      const runExclusive = jest.spyOn(lifecycleLock, 'runExclusive');
       (fs.pathExists as jest.Mock).mockResolvedValue(true);
       mockExec
         .mockResolvedValueOnce({ stdout: '' })
@@ -248,6 +279,7 @@ describe('ServerManagementService', () => {
       const result = await service.restartServer('myserver');
 
       expect(result).toBe(true);
+      expect(runExclusive).toHaveBeenCalledWith('myserver', expect.any(Function));
     });
   });
 

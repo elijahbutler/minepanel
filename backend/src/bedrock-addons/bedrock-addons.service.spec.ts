@@ -3,16 +3,19 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { ServerManagementService } from 'src/server-management/server-management.service';
+import { ServerLifecycleLockService } from 'src/server-management/server-lifecycle-lock.service';
 import { BedrockAddonsService } from './bedrock-addons.service';
 
 describe('BedrockAddonsService', () => {
   let tempDir: string;
   let service: BedrockAddonsService;
   let getServerStatus: jest.MockedFunction<ServerManagementService['getServerStatus']>;
+  let lifecycleLock: ServerLifecycleLockService;
 
   beforeEach(async () => {
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'minepanel-bedrock-addons-'));
     getServerStatus = jest.fn().mockResolvedValue('stopped');
+    lifecycleLock = new ServerLifecycleLockService();
 
     service = new BedrockAddonsService(
       {
@@ -30,6 +33,7 @@ describe('BedrockAddonsService', () => {
         getServerConfig: jest.fn().mockResolvedValue({ id: 'bed', edition: 'BEDROCK' }),
       } as any,
       { getServerStatus } as unknown as ServerManagementService,
+      lifecycleLock,
     );
   });
 
@@ -92,6 +96,7 @@ describe('BedrockAddonsService', () => {
         getServerConfig: jest.fn().mockResolvedValue({ id: 'java', edition: 'JAVA' }),
       } as any,
       { getServerStatus } as unknown as ServerManagementService,
+      lifecycleLock,
     );
 
     await expect(javaService.clearAddonRuntimeState('java')).rejects.toBeInstanceOf(BadRequestException);
@@ -189,6 +194,37 @@ describe('BedrockAddonsService', () => {
 
     const registry = await fs.readJson(path.join(serverDir, 'addons', 'registry.json'));
     expect(registry.addons.map((addon: { id: string }) => addon.id)).toEqual(['a1', 'a2']);
+  });
+
+  it('holds the lifecycle lock from the status check through the reorder writes', async () => {
+    await seedServer('bed', [
+      { id: 'a1', behaviorUuid: 'bp-1' },
+      { id: 'a2', behaviorUuid: 'bp-2' },
+    ]);
+    let resolveStatus!: (status: 'stopped') => void;
+    const statusResult = new Promise<'stopped'>((resolve) => {
+      resolveStatus = resolve;
+    });
+    let markStatusRequested!: () => void;
+    const statusRequested = new Promise<void>((resolve) => {
+      markStatusRequested = resolve;
+    });
+    getServerStatus.mockImplementation(() => {
+      markStatusRequested();
+      return statusResult;
+    });
+    const reorder = service.reorderAddons('bed', ['a2', 'a1']);
+    await statusRequested;
+
+    const startup = jest.fn(async () => true);
+    const start = lifecycleLock.runExclusive('bed', startup);
+    await Promise.resolve();
+    expect(startup).not.toHaveBeenCalled();
+
+    resolveStatus('stopped');
+    await reorder;
+    await expect(start).resolves.toBe(true);
+    expect(startup).toHaveBeenCalledTimes(1);
   });
 
   it('reorderAddons should keep manually installed packs after managed packs', async () => {

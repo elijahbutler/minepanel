@@ -16,6 +16,7 @@ import { ServerStoreService } from 'src/docker-compose/server-store.service';
 import { InstanceSettingsService } from 'src/settings/instance-settings.service';
 import { DockerComposeService } from 'src/docker-compose/docker-compose.service';
 import { getComposeLabel, getComposeLabelFlag } from 'src/common/compose/compose-labels';
+import { ServerLifecycleLockService } from './server-lifecycle-lock.service';
 
 const execAsync = promisify(exec);
 
@@ -155,6 +156,7 @@ export class ServerManagementService {
     private readonly store: ServerStoreService,
     private readonly instanceSettings: InstanceSettingsService,
     private readonly composeService: DockerComposeService,
+    private readonly lifecycleLock: ServerLifecycleLockService,
   ) {
     this.SERVERS_DIR = this.configService.get('serversDir');
     this.SERVERS_HOST_DIR = this.configService.get('serversHostDir');
@@ -761,6 +763,10 @@ export class ServerManagementService {
   }
 
   async restartServer(serverId: string): Promise<boolean> {
+    return this.lifecycleLock.runExclusive(serverId, () => this.restartServerUnlocked(serverId));
+  }
+
+  private async restartServerUnlocked(serverId: string): Promise<boolean> {
     try {
       if (!this.validateServerId(serverId)) {
         this.logger.error(`Invalid server ID: ${serverId}`);
@@ -1668,6 +1674,10 @@ export class ServerManagementService {
   }
 
   async startServer(serverId: string): Promise<boolean> {
+    return this.lifecycleLock.runExclusive(serverId, () => this.startServerUnlocked(serverId));
+  }
+
+  private async startServerUnlocked(serverId: string): Promise<boolean> {
     try {
       if (!this.validateServerId(serverId)) {
         this.logger.error(`Invalid server ID: ${serverId}`);

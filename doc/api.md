@@ -255,7 +255,8 @@ Bedrock addon management:
 - `DELETE /bedrock-addons/:serverId/:addonId`
 
 The order endpoint returns `409 Conflict` while the server is running or starting.
-This prevents priority changes from rewriting the active world's pack files.
+The reorder transaction and server startup share a per-server lifecycle gate, so
+startup cannot begin between the runtime check and the active-world pack writes.
 
 ### Proxy
 
