@@ -106,11 +106,15 @@ Server config tabs:
   `edition === 'BEDROCK'`.
 - Renaming or removing a tab value means adding an entry to `RENAMED_TABS` in
   `ServerConfigTabs.tsx`: the tab value is the URL hash and people bookmark it.
-- Every `config` tab is disabled while the server runs, `worlds` included: a world
-  swapped underneath a live server is a data hazard, and the rule only holds if it
-  has no exceptions. Adding a config tab means adding it to `tabsMeta` with
-  `disabled: isServerRunning` **and** to the `disabledTabs` list that bounces you
-  off a tab the server just made unreachable.
+- Configuration tabs remain available while a server runs. Ordinary config saves
+  update `server.json` and the generated compose file, but Docker does not change
+  the running containers; the saved values apply when Minepanel performs the next
+  compose down/up restart. Network routing stays read-only because the panel can
+  regenerate live mc-router routes. RCON credentials stay read-only so Commands
+  keep using the credentials loaded by the active container. Bedrock add-ons plus
+  Files stay read-only because they mutate active world data. The Worlds tab saves a selection with
+  `restartIfRunning: false` while running, so the current world is left alone and
+  the selection applies on the next restart.
 - Simple/Advanced mode is a filter over the same tabs, never a second tab tree.
   Mark a tab `advanced: true` in `tabsMeta` and give it a predicate in
   `src/lib/server-config/advanced-tabs.ts`. The predicate is not optional: simple

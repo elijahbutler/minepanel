@@ -5,6 +5,10 @@ import { ChangeEvent, FC, useCallback, useEffect, useRef, useState } from "react
 import Image from "next/image";
 import { Reorder } from "framer-motion";
 import {
+  Alert,
+  AlertDescription,
+} from "@/components/ui/alert";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -25,19 +29,20 @@ import {
   BedrockAddonSearchItem,
   bedrockAddonsService,
 } from "@/services/bedrock-addons/bedrock-addons.service";
-import { ArrowUpNarrowWide, ChevronLeft, ChevronRight, Download, ExternalLink, FileArchive, Loader2, Package, Search, Upload, X } from "lucide-react";
+import { AlertCircle, ArrowUpNarrowWide, ChevronLeft, ChevronRight, Download, ExternalLink, FileArchive, Loader2, Package, Search, Upload, X } from "lucide-react";
 import { BedrockAddonItem, normalizeAddonText } from "./BedrockAddonItem";
 
 interface BedrockAddonsTabProps {
   serverId: string;
   refreshToken?: number;
+  readOnly?: boolean;
 }
 
 const SEARCH_PAGE_SIZE = 8;
 const REORDER_COMMIT_DELAY = 500;
 const BEDROCK_ADDONS_DOCS_URL = "https://minepanel.ketbome.com/mods-plugins#bedrock-addons";
 
-export const BedrockAddonsTab: FC<BedrockAddonsTabProps> = ({ serverId, refreshToken = 0 }) => {
+export const BedrockAddonsTab: FC<BedrockAddonsTabProps> = ({ serverId, refreshToken = 0, readOnly = false }) => {
   const { t } = useLanguage();
   const [addons, setAddons] = useState<BedrockAddon[]>([]);
   const [levelName, setLevelName] = useState("Bedrock level");
@@ -105,6 +110,8 @@ export const BedrockAddonsTab: FC<BedrockAddonsTabProps> = ({ serverId, refreshT
   }, [getErrorMessage, serverId, t]);
 
   const commitOrder = useCallback(async () => {
+    if (readOnly) return;
+
     const next = addonsRef.current;
     const previous = lastSyncedOrderRef.current;
     const sameOrder = next.length === previous.length && next.every((addon, index) => addon.id === previous[index]?.id);
@@ -125,7 +132,7 @@ export const BedrockAddonsTab: FC<BedrockAddonsTabProps> = ({ serverId, refreshT
     } finally {
       setReordering(false);
     }
-  }, [getErrorMessage, serverId, t]);
+  }, [getErrorMessage, readOnly, serverId, t]);
 
   const scheduleCommitOrder = useCallback(() => {
     if (reorderTimerRef.current) {
@@ -144,14 +151,18 @@ export const BedrockAddonsTab: FC<BedrockAddonsTabProps> = ({ serverId, refreshT
   }, []);
 
   const handleDragEnd = useCallback(() => {
+    if (readOnly) return;
+
     if (reorderTimerRef.current) {
       clearTimeout(reorderTimerRef.current);
       reorderTimerRef.current = null;
     }
     commitOrder();
-  }, [commitOrder]);
+  }, [commitOrder, readOnly]);
 
   const handleMove = useCallback((addon: BedrockAddon, direction: -1 | 1) => {
+    if (readOnly) return;
+
     const current = addonsRef.current;
     const index = current.findIndex((item) => item.id === addon.id);
     const targetIndex = index + direction;
@@ -163,7 +174,7 @@ export const BedrockAddonsTab: FC<BedrockAddonsTabProps> = ({ serverId, refreshT
     [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
     setAddons(next);
     scheduleCommitOrder();
-  }, [scheduleCommitOrder]);
+  }, [readOnly, scheduleCommitOrder]);
 
   useEffect(() => {
     loadAddons();
@@ -193,6 +204,8 @@ export const BedrockAddonsTab: FC<BedrockAddonsTabProps> = ({ serverId, refreshT
   };
 
   const handleUpload = async () => {
+    if (readOnly) return;
+
     if (!selectedFile) {
       mcToast.error(t("bedrockAddonsNoFileSelected"));
       return;
@@ -219,6 +232,8 @@ export const BedrockAddonsTab: FC<BedrockAddonsTabProps> = ({ serverId, refreshT
   };
 
   const handleImport = async (result: BedrockAddonSearchItem) => {
+    if (readOnly) return;
+
     setActionId(`import-${result.projectId}`);
     setBlockingMessage(t("bedrockAddonsProcessingImport"));
     try {
@@ -238,6 +253,8 @@ export const BedrockAddonsTab: FC<BedrockAddonsTabProps> = ({ serverId, refreshT
   };
 
   const handleToggle = async (addon: BedrockAddon) => {
+    if (readOnly) return;
+
     setActionId(addon.id);
     setBlockingMessage(t(addon.enabled ? "bedrockAddonsProcessingDisable" : "bedrockAddonsProcessingEnable"));
     try {
@@ -259,6 +276,8 @@ export const BedrockAddonsTab: FC<BedrockAddonsTabProps> = ({ serverId, refreshT
   };
 
   const handleDelete = async (addon: BedrockAddon) => {
+    if (readOnly) return;
+
     setAddonPendingDelete(null);
     setActionId(`delete-${addon.id}`);
     setBlockingMessage(t("bedrockAddonsProcessingDelete"));
@@ -297,6 +316,13 @@ export const BedrockAddonsTab: FC<BedrockAddonsTabProps> = ({ serverId, refreshT
         <CardDescription className="text-gray-300">{t("bedrockAddonsDescription")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        {readOnly && (
+          <Alert className="bg-amber-900/30 border-amber-800 text-amber-200">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{t("runningTabReadOnlyDesc")}</AlertDescription>
+          </Alert>
+        )}
+
         <div className="rounded-xl border border-emerald-900/40 bg-linear-to-r from-gray-900/90 via-gray-800/75 to-gray-900/90 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
@@ -326,6 +352,7 @@ export const BedrockAddonsTab: FC<BedrockAddonsTabProps> = ({ serverId, refreshT
                 type="file"
                 accept=".mcaddon,.mcpack,.zip"
                 onChange={handleFileChange}
+                disabled={readOnly}
                 className="hidden"
               />
               <div className="rounded-xl border border-gray-700/70 bg-gray-900/60 p-3">
@@ -343,12 +370,12 @@ export const BedrockAddonsTab: FC<BedrockAddonsTabProps> = ({ serverId, refreshT
                 </div>
                 <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                   <Button asChild variant="minepanelOutline" className="flex-1 font-minecraft">
-                    <label htmlFor="bedrock-addon-upload" className={`cursor-pointer ${isBusy ? "pointer-events-none opacity-60" : ""}`}>
+                    <label htmlFor="bedrock-addon-upload" className={`cursor-pointer ${isBusy || readOnly ? "pointer-events-none opacity-60" : ""}`}>
                       <FileArchive className="h-4 w-4" />
                       {t("bedrockAddonsSelectFile")}
                     </label>
                   </Button>
-                  <Button type="button" variant="minepanel" onClick={handleUpload} disabled={!selectedFile || uploading || isBusy} className="flex-1 font-minecraft">
+                  <Button type="button" variant="minepanel" onClick={handleUpload} disabled={readOnly || !selectedFile || uploading || isBusy} className="flex-1 font-minecraft">
                     {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                     {t("upload")}
                   </Button>
@@ -411,7 +438,7 @@ export const BedrockAddonsTab: FC<BedrockAddonsTabProps> = ({ serverId, refreshT
                           size="sm"
                           variant="minepanelOutline"
                           onClick={() => handleImport(result)}
-                          disabled={!result.importable || actionId === `import-${result.projectId}` || isBusy}
+                          disabled={readOnly || !result.importable || actionId === `import-${result.projectId}` || isBusy}
                           className="h-9 rounded-lg border-cyan-500/40 bg-cyan-950/25 px-3 font-minecraft text-cyan-300 hover:border-cyan-400/60 hover:bg-cyan-900/30 hover:text-cyan-100"
                         >
                           {actionId === `import-${result.projectId}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
@@ -456,7 +483,9 @@ export const BedrockAddonsTab: FC<BedrockAddonsTabProps> = ({ serverId, refreshT
                   as="div"
                   axis="y"
                   values={addons}
-                  onReorder={setAddons}
+                  onReorder={(next) => {
+                    if (!readOnly) setAddons(next);
+                  }}
                   className="space-y-3 max-h-[32rem] overflow-y-auto pr-1"
                 >
                   {addons.map((addon, index) => (
@@ -465,7 +494,7 @@ export const BedrockAddonsTab: FC<BedrockAddonsTabProps> = ({ serverId, refreshT
                       addon={addon}
                       index={index}
                       total={addons.length}
-                      disabled={isBusy || reordering}
+                      disabled={readOnly || isBusy || reordering}
                       actionId={actionId}
                       onToggle={handleToggle}
                       onRequestDelete={setAddonPendingDelete}
@@ -493,6 +522,7 @@ export const BedrockAddonsTab: FC<BedrockAddonsTabProps> = ({ serverId, refreshT
             <AlertDialogCancel className="bg-gray-700 hover:bg-gray-600 text-gray-200 border-gray-600">{t("cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => addonPendingDelete && handleDelete(addonPendingDelete)}
+              disabled={readOnly}
               className="bg-red-700 hover:bg-red-800 text-white border-red-900/50 font-minecraft"
             >
               {t("delete")}

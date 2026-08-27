@@ -464,7 +464,9 @@ export const en = {
   autoSaveActive: 'Active',
   serverRunningWarning: 'Server is Running',
   serverRunningWarningDesc:
-    'Configuration cannot be edited while the server is running. Stop the server to make changes.',
+    'You can review and save configuration now. Saved changes apply after the next restart. Network routing, RCON credentials, add-ons, and live files stay read-only.',
+  runningTabReadOnlyDesc:
+    'This section can affect live routing or server files. You can inspect it now, but stop the server before editing it.',
   unsavedChanges: 'Unsaved Changes',
   allChangesSaved: 'All Changes Saved',
   failedToFetchVersions: 'Failed to fetch versions',
@@ -1724,6 +1726,7 @@ export const en = {
   worldsLoadError: 'Error loading available worlds',
   worldsEmpty: 'No worlds found. Upload a folder (with level.dat) or ZIP/TAR into local servers/<id>/worlds or World Library.',
   worldsRestartNoticeStopped: 'The server is stopped. The selected world will apply on the next start.',
+  worldsRestartNoticeRunning: 'The running world will not be touched. Save this selection now and it will apply after the next restart.',
   allLabel: 'All',
   worldSourceLocal: 'Local',
   worldSourceLibrary: 'World Library',

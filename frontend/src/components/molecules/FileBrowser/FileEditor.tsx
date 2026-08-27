@@ -21,6 +21,7 @@ interface FileEditorProps {
   content: string;
   onSave: (content: string) => void;
   onClose: () => void;
+  readOnly?: boolean;
 }
 
 const getLanguageFromPath = (path: string): string => {
@@ -49,7 +50,7 @@ const getLanguageFromPath = (path: string): string => {
   return langMap[ext || ""] || "plaintext";
 };
 
-export const FileEditor: FC<FileEditorProps> = ({ path, content, onSave, onClose }) => {
+export const FileEditor: FC<FileEditorProps> = ({ path, content, onSave, onClose, readOnly = false }) => {
   const { t } = useLanguage();
   const [editedContent, setEditedContent] = useState(content);
   const [isSaving, setIsSaving] = useState(false);
@@ -59,10 +60,11 @@ export const FileEditor: FC<FileEditorProps> = ({ path, content, onSave, onClose
   const language = getLanguageFromPath(path);
 
   const handleSave = useCallback(async () => {
+    if (readOnly) return;
     setIsSaving(true);
     await onSave(editedContent);
     setIsSaving(false);
-  }, [editedContent, onSave]);
+  }, [editedContent, onSave, readOnly]);
 
   const handleEditorChange = useCallback((value: string | undefined) => {
     setEditedContent(value || "");
@@ -72,10 +74,10 @@ export const FileEditor: FC<FileEditorProps> = ({ path, content, onSave, onClose
     (e: React.KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "s") {
         e.preventDefault();
-        if (hasChanges) handleSave();
+        if (!readOnly && hasChanges) handleSave();
       }
     },
-    [hasChanges, handleSave]
+    [hasChanges, handleSave, readOnly]
   );
 
   return (
@@ -104,15 +106,17 @@ export const FileEditor: FC<FileEditorProps> = ({ path, content, onSave, onClose
             </span>
           )}
         </div>
-        <Button
-          onClick={handleSave}
-          disabled={!hasChanges || isSaving}
-          className="gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50"
-          size="sm"
-        >
-          {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          {isSaving ? t("saving") : t("save")}
-        </Button>
+        {!readOnly && (
+          <Button
+            onClick={handleSave}
+            disabled={!hasChanges || isSaving}
+            className="gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50"
+            size="sm"
+          >
+            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            {isSaving ? t("saving") : t("save")}
+          </Button>
+        )}
       </div>
 
       {/* Editor */}
@@ -138,6 +142,7 @@ export const FileEditor: FC<FileEditorProps> = ({ path, content, onSave, onClose
             tabSize: 2,
             folding: true,
             bracketPairColorization: { enabled: true },
+            readOnly,
           }}
         />
       </div>
@@ -145,7 +150,7 @@ export const FileEditor: FC<FileEditorProps> = ({ path, content, onSave, onClose
       {/* Footer */}
       <div className="flex items-center justify-between px-4 py-2 bg-gray-800/30 border-t border-gray-700/50 text-xs text-gray-500">
         <span>{path}</span>
-        <span>Ctrl+S {t("toSave")}</span>
+        {!readOnly && <span>Ctrl+S {t("toSave")}</span>}
       </div>
     </div>
   );

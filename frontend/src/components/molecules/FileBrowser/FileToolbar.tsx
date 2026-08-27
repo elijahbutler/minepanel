@@ -23,6 +23,7 @@ interface FileToolbarProps {
   onRename: (file: FileItem, newName: string) => void;
   onDownload: (file: FileItem) => void;
   isUploading?: boolean;
+  readOnly?: boolean;
 }
 
 export const FileToolbar: FC<FileToolbarProps> = ({
@@ -34,6 +35,7 @@ export const FileToolbar: FC<FileToolbarProps> = ({
   onRename,
   onDownload,
   isUploading = false,
+  readOnly = false,
 }) => {
   const { t } = useLanguage();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -45,6 +47,7 @@ export const FileToolbar: FC<FileToolbarProps> = ({
   const [renameName, setRenameName] = useState("");
 
   const handleCreateFolder = () => {
+    if (readOnly) return;
     if (newFolderName.trim()) {
       onCreateFolder(newFolderName.trim());
       setNewFolderName("");
@@ -53,6 +56,7 @@ export const FileToolbar: FC<FileToolbarProps> = ({
   };
 
   const handleRename = () => {
+    if (readOnly) return;
     if (selectedFile && renameName.trim()) {
       onRename(selectedFile, renameName.trim());
       setRenameName("");
@@ -61,6 +65,7 @@ export const FileToolbar: FC<FileToolbarProps> = ({
   };
 
   const handleDelete = () => {
+    if (readOnly) return;
     if (selectedFile) {
       onDelete(selectedFile);
       setShowDeleteDialog(false);
@@ -101,6 +106,7 @@ export const FileToolbar: FC<FileToolbarProps> = ({
           size="sm"
           className="gap-2 text-gray-300 hover:text-white hover:bg-gray-700/50"
           onClick={() => setShowNewFolderDialog(true)}
+          disabled={readOnly}
         >
           <FolderPlus className="h-4 w-4" />
           {t("newFolder")}
@@ -111,7 +117,7 @@ export const FileToolbar: FC<FileToolbarProps> = ({
           size="sm"
           className="gap-2 text-gray-300 hover:text-white hover:bg-gray-700/50"
           onClick={() => fileInputRef.current?.click()}
-          disabled={isUploading}
+          disabled={readOnly || isUploading}
         >
           {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
           {isUploading ? t("uploading") : t("uploadFiles")}
@@ -122,7 +128,7 @@ export const FileToolbar: FC<FileToolbarProps> = ({
           size="sm"
           className="gap-2 text-gray-300 hover:text-white hover:bg-gray-700/50"
           onClick={() => folderInputRef.current?.click()}
-          disabled={isUploading}
+          disabled={readOnly || isUploading}
         >
           {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FolderPlus className="h-4 w-4" />}
           {t("uploadFolder")}
@@ -133,6 +139,7 @@ export const FileToolbar: FC<FileToolbarProps> = ({
           type="file"
           className="hidden"
           onChange={handleFileSelect}
+          disabled={readOnly}
           multiple
         />
         <input
@@ -140,6 +147,7 @@ export const FileToolbar: FC<FileToolbarProps> = ({
           type="file"
           className="hidden"
           onChange={handleFolderSelect}
+          disabled={readOnly}
           {...({ webkitdirectory: "", directory: "" } as React.InputHTMLAttributes<HTMLInputElement>)}
         />
 
@@ -152,6 +160,7 @@ export const FileToolbar: FC<FileToolbarProps> = ({
               size="sm"
               className="gap-2 text-gray-300 hover:text-white hover:bg-gray-700/50"
               onClick={openRenameDialog}
+              disabled={readOnly}
             >
               <Pencil className="h-4 w-4" />
               {t("rename")}
@@ -174,6 +183,7 @@ export const FileToolbar: FC<FileToolbarProps> = ({
               size="sm"
               className="gap-2 text-red-400 hover:text-red-300 hover:bg-red-900/20"
               onClick={() => setShowDeleteDialog(true)}
+              disabled={readOnly}
             >
               <Trash2 className="h-4 w-4" />
               {t("delete")}
@@ -209,7 +219,7 @@ export const FileToolbar: FC<FileToolbarProps> = ({
             <Button variant="ghost" onClick={() => setShowNewFolderDialog(false)}>
               {t("cancel")}
             </Button>
-            <Button onClick={handleCreateFolder} className="bg-emerald-600 hover:bg-emerald-700">
+            <Button onClick={handleCreateFolder} disabled={readOnly} className="bg-emerald-600 hover:bg-emerald-700">
               {t("create")}
             </Button>
           </DialogFooter>
@@ -234,7 +244,7 @@ export const FileToolbar: FC<FileToolbarProps> = ({
             <Button variant="ghost" onClick={() => setShowRenameDialog(false)}>
               {t("cancel")}
             </Button>
-            <Button onClick={handleRename} className="bg-emerald-600 hover:bg-emerald-700">
+            <Button onClick={handleRename} disabled={readOnly} className="bg-emerald-600 hover:bg-emerald-700">
               {t("rename")}
             </Button>
           </DialogFooter>
@@ -254,7 +264,7 @@ export const FileToolbar: FC<FileToolbarProps> = ({
             <Button variant="ghost" onClick={() => setShowDeleteDialog(false)}>
               {t("cancel")}
             </Button>
-            <Button onClick={handleDelete} variant="destructive">
+            <Button onClick={handleDelete} disabled={readOnly} variant="destructive">
               {t("delete")}
             </Button>
           </DialogFooter>
@@ -263,4 +273,3 @@ export const FileToolbar: FC<FileToolbarProps> = ({
     </>
   );
 };
-
