@@ -9,6 +9,7 @@ interface DropZoneProps {
   onFilesDropped: (files: File[], relativePaths?: string[]) => void;
   children: React.ReactNode;
   className?: string;
+  disabled?: boolean;
 }
 
 async function traverseDirectory(entry: FileSystemEntry, basePath: string = ""): Promise<{ file: File; path: string }[]> {
@@ -37,7 +38,7 @@ async function traverseDirectory(entry: FileSystemEntry, basePath: string = ""):
   return results;
 }
 
-export const DropZone: FC<DropZoneProps> = ({ onFilesDropped, children, className }) => {
+export const DropZone: FC<DropZoneProps> = ({ onFilesDropped, children, className, disabled = false }) => {
   const { t } = useLanguage();
   const [isDragging, setIsDragging] = useState(false);
   const [dragCounter, setDragCounter] = useState(0);
@@ -45,15 +46,17 @@ export const DropZone: FC<DropZoneProps> = ({ onFilesDropped, children, classNam
   const handleDragEnter = useCallback((e: DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (disabled) return;
     setDragCounter((prev) => prev + 1);
     if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
       setIsDragging(true);
     }
-  }, []);
+  }, [disabled]);
 
   const handleDragLeave = useCallback((e: DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (disabled) return;
     setDragCounter((prev) => {
       const newCount = prev - 1;
       if (newCount === 0) {
@@ -61,17 +64,19 @@ export const DropZone: FC<DropZoneProps> = ({ onFilesDropped, children, classNam
       }
       return newCount;
     });
-  }, []);
+  }, [disabled]);
 
   const handleDragOver = useCallback((e: DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-  }, []);
+    if (disabled) return;
+  }, [disabled]);
 
   const handleDrop = useCallback(
     async (e: DragEvent) => {
       e.preventDefault();
       e.stopPropagation();
+      if (disabled) return;
       setIsDragging(false);
       setDragCounter(0);
 
@@ -104,7 +109,7 @@ export const DropZone: FC<DropZoneProps> = ({ onFilesDropped, children, classNam
         onFilesDropped(allFiles, allPaths.length > 0 ? allPaths : undefined);
       }
     },
-    [onFilesDropped]
+    [disabled, onFilesDropped]
   );
 
   return (
@@ -114,7 +119,7 @@ export const DropZone: FC<DropZoneProps> = ({ onFilesDropped, children, classNam
       {isDragging && (
         <div className="absolute inset-0 z-40 flex items-center justify-center bg-emerald-900/80 backdrop-blur-sm border-2 border-dashed border-emerald-400 rounded-lg select-none">
           <div className="flex flex-col items-center gap-3 text-emerald-300">
-            <Upload className="h-12 w-12 animate-bounce" />
+            <Upload className="h-12 w-12" />
             <p className="text-lg font-minecraft">{t("dropFilesHere")}</p>
             <p className="text-sm text-emerald-400/70">{t("releaseToUpload")}</p>
           </div>

@@ -78,21 +78,21 @@ export const ServerConfigTabs: FC<ServerConfigTabsProps> = ({ serverId, config, 
   // `advanced` tabs are the ones a server can run its whole life without. Simple
   // mode hides them unless this server already has something set in there.
   const tabsMeta: (ServerNavItem & { show: boolean; advanced?: boolean })[] = [
-    { value: "type", label: t("serverType"), icon: Server, group: "config", show: true, disabled: isServerRunning },
-    { value: "game", label: t("game"), icon: Gamepad2, group: "config", show: true, disabled: isServerRunning },
-    { value: "worlds", label: t("worlds"), icon: Globe, group: "config", show: showWorldsTab, disabled: isServerRunning },
-    { value: "access", label: t("access"), icon: Shield, group: "config", show: true, disabled: isServerRunning },
-    { value: "network", label: t("network"), icon: Network, group: "config", show: true, disabled: isServerRunning, advanced: true },
-    { value: "resources", label: t("resources"), icon: Cpu, group: "config", show: showResourcesTab, disabled: isServerRunning },
-    { value: "lifecycle", label: t("lifecycle"), icon: Power, group: "config", show: true, disabled: isServerRunning, advanced: true },
-    { value: "addons", label: t("addons"), icon: Package, group: "config", show: isBedrock, disabled: isServerRunning },
-    { value: "mods", label: t("mods"), icon: Package, group: "config", show: showModsTab, disabled: isServerRunning },
-    { value: "plugins", label: t("plugins"), icon: Layers, group: "config", show: showPluginsTab, disabled: isServerRunning },
-    { value: "backups", label: t("backups"), icon: Archive, group: "config", show: showBackupsTab, disabled: isServerRunning },
-    { value: "advanced", label: t("advanced"), icon: Code, group: "config", show: true, disabled: isServerRunning, advanced: true },
+    { value: "type", label: t("serverType"), icon: Server, group: "config", show: true, disabled: false },
+    { value: "game", label: t("game"), icon: Gamepad2, group: "config", show: true, disabled: false },
+    { value: "worlds", label: t("worlds"), icon: Globe, group: "config", show: showWorldsTab, disabled: false },
+    { value: "access", label: t("access"), icon: Shield, group: "config", show: true, disabled: false },
+    { value: "network", label: t("network"), icon: Network, group: "config", show: true, disabled: false, advanced: true },
+    { value: "resources", label: t("resources"), icon: Cpu, group: "config", show: showResourcesTab, disabled: false },
+    { value: "lifecycle", label: t("lifecycle"), icon: Power, group: "config", show: true, disabled: false, advanced: true },
+    { value: "addons", label: t("addons"), icon: Package, group: "config", show: isBedrock, disabled: false },
+    { value: "mods", label: t("mods"), icon: Package, group: "config", show: showModsTab, disabled: false },
+    { value: "plugins", label: t("plugins"), icon: Layers, group: "config", show: showPluginsTab, disabled: false },
+    { value: "backups", label: t("backups"), icon: Archive, group: "config", show: showBackupsTab, disabled: false },
+    { value: "advanced", label: t("advanced"), icon: Code, group: "config", show: true, disabled: false, advanced: true },
     { value: "logs", label: t("logs"), icon: ScrollText, group: "operation", show: true, disabled: false },
     { value: "commands", label: t("commands"), icon: Terminal, group: "operation", show: showCommandsTab, disabled: !isServerRunning },
-    { value: "files", label: t("files"), icon: FolderOpen, group: "operation", show: true, disabled: isServerRunning },
+    { value: "files", label: t("files"), icon: FolderOpen, group: "operation", show: true, disabled: false },
     { value: "metrics", label: t("metrics"), icon: Activity, group: "monitoring", show: true, disabled: false },
     { value: "tasks", label: t("tasks"), icon: Clock, group: "monitoring", show: true, disabled: false },
   ];
@@ -243,18 +243,9 @@ export const ServerConfigTabs: FC<ServerConfigTabsProps> = ({ serverId, config, 
     }
   }, [applicableSignature, visibleSignature, activeTab, setConfigMode]);
 
-  useEffect(() => {
-    if (isServerRunning) {
-      const disabledTabs = ["type", "game", "worlds", "access", "network", "resources", "lifecycle", "addons", "mods", "plugins", "backups", "advanced", "files"];
-      if (disabledTabs.includes(activeTab)) {
-        setActiveTab("logs");
-      }
-    }
-  }, [isServerRunning, activeTab]);
-
   return (
     <div className="space-y-4 pb-24 animate-fade-in">
-      {!isServerRunning && <SaveModeControl onManualSave={handleSaveConfig} isSaving={isSaving} hasUnsavedChanges={hasUnsavedChanges} />}
+      <SaveModeControl onManualSave={handleSaveConfig} isSaving={isSaving} hasUnsavedChanges={hasUnsavedChanges} />
 
       <ConfigModeToggle mode={configMode} onChange={setConfigMode} hiddenCount={hiddenTabCount} />
 
@@ -285,16 +276,16 @@ export const ServerConfigTabs: FC<ServerConfigTabsProps> = ({ serverId, config, 
 
               {showWorldsTab && (
                 <TabsContent value="worlds" className="space-y-4 mt-0">
-                  <WorldsTab serverId={serverId} config={config} updateConfig={updateConfig} />
+                  <WorldsTab serverId={serverId} config={config} updateConfig={updateConfig} serverRunning={isServerRunning} onConfigSaved={(nextConfig) => setSavedConfig(nextConfig)} />
                 </TabsContent>
               )}
 
               <TabsContent value="access" className="space-y-4 mt-0">
-                <AccessTab config={config} updateConfig={updateConfig} />
+                <AccessTab config={config} updateConfig={updateConfig} readOnlyRcon={isServerRunning} />
               </TabsContent>
 
               <TabsContent value="network" className="space-y-4 mt-0">
-                <NetworkTab config={config} updateConfig={updateConfig} />
+                <NetworkTab config={config} updateConfig={updateConfig} readOnly={isServerRunning} />
               </TabsContent>
 
               {showResourcesTab && (
@@ -309,7 +300,7 @@ export const ServerConfigTabs: FC<ServerConfigTabsProps> = ({ serverId, config, 
 
               {isBedrock && (
                 <TabsContent value="addons" className="space-y-4 mt-0">
-                  <BedrockAddonsTab serverId={serverId} refreshToken={refreshToken} />
+                  <BedrockAddonsTab serverId={serverId} refreshToken={refreshToken} readOnly={isServerRunning} />
                 </TabsContent>
               )}
 
@@ -346,7 +337,7 @@ export const ServerConfigTabs: FC<ServerConfigTabsProps> = ({ serverId, config, 
               )}
 
               <TabsContent value="files" className="space-y-4 mt-0">
-                <FilesTab serverId={serverId} />
+                <FilesTab serverId={serverId} readOnly={isServerRunning} />
               </TabsContent>
 
               <TabsContent value="metrics" className="space-y-4 mt-0">

@@ -43,6 +43,16 @@ npm run lint
 - `src/lib/store/` - global state
 - `src/lib/translations/` - i18n
 
+## Running server configuration
+
+Configuration tabs remain open while a server is running. Saves update the stored
+server configuration and apply when Minepanel next restarts the server with a
+Compose down/up cycle. Network routing, Bedrock add-ons, and live files remain
+read-only until the server stops. RCON credentials are also locked so live console
+actions keep using the active container's credentials. World selections can be
+saved while running and take effect on the next restart without touching the
+active world.
+
 ## References
 
 - Frontend agent rules: `frontend/AGENTS.md`

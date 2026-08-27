@@ -468,7 +468,9 @@ export const pl: Record<TranslationKey, string> = {
   autoSaveActive: 'Aktywny',
   serverRunningWarning: 'Serwer jest uruchomiony',
   serverRunningWarningDesc:
-    'Konfiguracji nie można edytować, gdy serwer jest uruchomiony. Zatrzymaj serwer, aby wprowadzić zmiany',
+    'Możesz teraz przeglądać i zapisywać konfigurację. Zapisane zmiany zostaną zastosowane po następnym restarcie. Routing sieciowy, dane RCON, dodatki i aktywne pliki pozostają tylko do odczytu.',
+  runningTabReadOnlyDesc:
+    'Ta sekcja może wpłynąć na aktywny routing lub pliki serwera. Możesz ją przeglądać, ale przed edycją zatrzymaj serwer.',
   unsavedChanges: 'Niezapisane zmiany',
   allChangesSaved: 'Wszystkie zmiany zapisane',
   failedToFetchVersions: 'Nie udało się pobrać wersji',
@@ -1733,6 +1735,7 @@ export const pl: Record<TranslationKey, string> = {
   worldsEmpty:
     'Nie znaleziono światów. Wgraj folder (z level.dat) lub ZIP/TAR do lokalnego servers/<id>/worlds albo do Biblioteki światów.',
   worldsRestartNoticeStopped: 'Serwer jest zatrzymany. Wybrany świat zostanie zastosowany przy następnym starcie.',
+  worldsRestartNoticeRunning: 'Aktywny świat nie zostanie zmieniony. Zapisz wybór teraz, aby zastosować go po następnym restarcie.',
   allLabel: 'Wszystkie',
   worldSourceLocal: 'Lokalne',
   worldSourceLibrary: 'Biblioteka światów',

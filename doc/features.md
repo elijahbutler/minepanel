@@ -143,7 +143,7 @@ Operational notes:
 - `WORLD` clone source is mounted read-only by Minepanel to avoid accidental source overwrites.
 - World Library includes **Discover Worlds** to search CurseForge worlds and import remote ZIP/TAR URLs directly into `servers/.world/worlds/`.
 - The World Library page lists what you already have as searchable cards, filterable by name and by the folder imports landed in. The file browser is still there, folded away, for uploading, renaming and deleting.
-- Each Java server has its own **Worlds** tab for picking which world it runs, with the same search across its local worlds and the shared library. Like every configuration tab, it needs the server stopped.
+- Each Java server has its own **Worlds** tab for picking which world it runs, with the same search across its local worlds and the shared library. A selection saved while running is staged for the next restart and does not touch the active world.
 
 **→ Full guide:** [Worlds](/worlds)
 
@@ -235,8 +235,16 @@ Edit from UI:
 Settings are grouped by the question you are asking, not by where the value is
 stored: **Type**, **Game**, **Worlds**, **Access**, **Network**, **Resources**,
 **Lifecycle**, mods/plugins/addons, **Backups** and **Advanced**. Configuration tabs
-are disabled while the server is running — stop it to change anything there. Logs,
-metrics and scheduled tasks stay available; commands need the server up.
+remain available while the server is running. You can save ordinary configuration,
+including mods, player access, resources and backups, without recreating the live
+containers. Minepanel applies those saved values on the next server restart.
+
+**Network** stays read-only while running because proxy-route changes can affect
+live connections. RCON credentials stay read-only so Commands keep using the port
+and password loaded by the active container. **Bedrock add-ons** and **Files** also
+stay read-only because they write into the active server data. You can inspect
+these settings before deciding whether to stop the server. Logs, metrics and
+scheduled tasks stay available; commands need the server up.
 
 A **Simple / Advanced** toggle above the tabs decides how much is shown. Simple
 hides Network, Lifecycle and Advanced plus the JVM options, unless the server

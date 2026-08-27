@@ -143,7 +143,7 @@ Minepanel includes world source management in the **Worlds** tab for Java server
 - The panel checks if the target level was already copied by looking for:
   `servers/<server-id>/mc-data/<LEVEL>/level.dat`
 
-The **Worlds** tab needs the server stopped, like every other configuration tab. Selecting a world updates the server config; the world is copied on the next start.
+You can save a selection in **Worlds** while the server runs. Minepanel leaves the active world alone and copies the selected world on the next restart.
 
 **→ Full guide:** [Worlds](/worlds)
 

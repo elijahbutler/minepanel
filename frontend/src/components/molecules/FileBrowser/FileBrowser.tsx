@@ -14,6 +14,7 @@ import { Loader2 } from "lucide-react";
 
 interface FileBrowserProps {
   serverId: string;
+  readOnly?: boolean;
 }
 
 // Extensiones que se pueden editar como texto
@@ -73,7 +74,7 @@ const isEditableFile = (file: FileItem): boolean => {
   return TEXT_EXTENSIONS.includes(file.extension.toLowerCase());
 };
 
-export const FileBrowser: FC<FileBrowserProps> = ({ serverId }) => {
+export const FileBrowser: FC<FileBrowserProps> = ({ serverId, readOnly = false }) => {
   const { t } = useLanguage();
   const [currentPath, setCurrentPath] = useState("");
   const [files, setFiles] = useState<FileItem[]>([]);
@@ -170,7 +171,7 @@ export const FileBrowser: FC<FileBrowserProps> = ({ serverId }) => {
 
   const handleSaveFile = useCallback(
     async (content: string) => {
-      if (!editingFile) return;
+      if (readOnly || !editingFile) return;
       try {
         await filesService.writeFile(serverId, editingFile.path, content);
         mcToast.success(t("fileSaved"));
@@ -181,11 +182,13 @@ export const FileBrowser: FC<FileBrowserProps> = ({ serverId }) => {
         mcToast.error(t("errorSavingFile"));
       }
     },
-    [editingFile, serverId, currentPath, loadFiles, t]
+    [editingFile, readOnly, serverId, currentPath, loadFiles, t]
   );
 
   const handleDelete = useCallback(
     async (file: FileItem) => {
+      if (readOnly) return;
+
       try {
         await filesService.deleteFile(serverId, file.path);
         mcToast.success(t("fileDeleted"));
@@ -196,11 +199,13 @@ export const FileBrowser: FC<FileBrowserProps> = ({ serverId }) => {
         mcToast.error(t("errorDeletingFile"));
       }
     },
-    [serverId, currentPath, loadFiles, t]
+    [readOnly, serverId, currentPath, loadFiles, t]
   );
 
   const handleCreateFolder = useCallback(
     async (name: string) => {
+      if (readOnly) return;
+
       try {
         const path = currentPath ? `${currentPath}/${name}` : name;
         await filesService.createDirectory(serverId, path);
@@ -211,11 +216,13 @@ export const FileBrowser: FC<FileBrowserProps> = ({ serverId }) => {
         mcToast.error(t("errorCreatingFolder"));
       }
     },
-    [serverId, currentPath, loadFiles, t]
+    [readOnly, serverId, currentPath, loadFiles, t]
   );
 
   const handleUploadFiles = useCallback(
     async (filesToUpload: File[], relativePaths?: string[]) => {
+      if (readOnly) return;
+
       setIsUploading(true);
       abortControllerRef.current = new AbortController();
 
@@ -315,7 +322,7 @@ export const FileBrowser: FC<FileBrowserProps> = ({ serverId }) => {
         abortControllerRef.current = null;
       }
     },
-    [serverId, currentPath, loadFiles, t]
+    [readOnly, serverId, currentPath, loadFiles, t]
   );
 
   const handleCancelUpload = useCallback(() => {
@@ -328,6 +335,8 @@ export const FileBrowser: FC<FileBrowserProps> = ({ serverId }) => {
 
   const handleRename = useCallback(
     async (file: FileItem, newName: string) => {
+      if (readOnly) return;
+
       try {
         await filesService.rename(serverId, file.path, newName);
         mcToast.success(t("fileRenamed"));
@@ -338,7 +347,7 @@ export const FileBrowser: FC<FileBrowserProps> = ({ serverId }) => {
         mcToast.error(t("errorRenamingFile"));
       }
     },
-    [serverId, currentPath, loadFiles, t]
+    [readOnly, serverId, currentPath, loadFiles, t]
   );
 
   // A big folder takes a while to zip and stream, so the transfer is tracked in
@@ -404,13 +413,13 @@ export const FileBrowser: FC<FileBrowserProps> = ({ serverId }) => {
   }, []);
 
   if (editingFile) {
-    return <FileEditor path={editingFile.path} content={editingFile.content} onSave={handleSaveFile} onClose={() => setEditingFile(null)} />;
+    return <FileEditor path={editingFile.path} content={editingFile.content} onSave={handleSaveFile} onClose={() => setEditingFile(null)} readOnly={readOnly} />;
   }
 
   return (
-    <DropZone onFilesDropped={handleUploadFiles} className="h-[600px]">
+    <DropZone onFilesDropped={handleUploadFiles} disabled={readOnly} className="h-[600px]">
       <div className="relative flex flex-col h-full bg-gray-900/60 border border-gray-700/50 rounded-lg overflow-hidden">
-        <FileToolbar onCreateFolder={handleCreateFolder} onUploadFiles={handleUploadFiles} onRefresh={() => loadFiles(currentPath)} selectedFile={selectedFile} onDelete={handleDelete} onRename={handleRename} onDownload={handleDownload} isUploading={isUploading} />
+        <FileToolbar onCreateFolder={handleCreateFolder} onUploadFiles={handleUploadFiles} onRefresh={() => loadFiles(currentPath)} selectedFile={selectedFile} onDelete={handleDelete} onRename={handleRename} onDownload={handleDownload} isUploading={isUploading} readOnly={readOnly} />
 
         <Breadcrumbs path={currentPath} onNavigate={navigateToFolder} onNavigateUp={navigateUp} />
 
@@ -425,11 +434,11 @@ export const FileBrowser: FC<FileBrowserProps> = ({ serverId }) => {
             onFileClick={handleFileClick}
             onFileDoubleClick={handleFileDoubleClick}
             onNavigateUp={currentPath ? navigateUp : undefined}
-            onEdit={handleEdit}
+            onEdit={readOnly ? undefined : handleEdit}
             onDownload={handleDownload}
             onDownloadZip={handleDownloadZip}
-            onDelete={handleDelete}
-            onRename={(file) => {
+            onDelete={readOnly ? undefined : handleDelete}
+            onRename={readOnly ? undefined : (file) => {
               const newName = prompt(t("enterNewName"), file.name);
               if (newName && newName !== file.name) {
                 handleRename(file, newName);

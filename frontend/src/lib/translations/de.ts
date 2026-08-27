@@ -466,7 +466,9 @@ export const de: Record<TranslationKey, string> = {
   autoSaveActive: 'Aktiv',
   serverRunningWarning: 'Server läuft',
   serverRunningWarningDesc:
-    'Die Konfiguration kann nicht bearbeitet werden, während der Server läuft. Stoppen Sie den Server, um Änderungen vorzunehmen.',
+    'Sie können die Konfiguration jetzt ansehen und speichern. Gespeicherte Änderungen werden nach dem nächsten Neustart angewendet. Netzwerk-Routing, RCON-Zugangsdaten, Add-ons und aktive Dateien bleiben schreibgeschützt.',
+  runningTabReadOnlyDesc:
+    'Dieser Bereich kann aktives Routing oder Serverdateien beeinflussen. Sie können ihn ansehen, müssen den Server zum Bearbeiten aber stoppen.',
   unsavedChanges: 'Ungespeicherte Änderungen',
   allChangesSaved: 'Alle Änderungen gespeichert',
   failedToFetchVersions: 'Versionen konnten nicht abgerufen werden',
@@ -1754,6 +1756,7 @@ export const de: Record<TranslationKey, string> = {
   worldsEmpty:
     'Keine Welten gefunden. Lade einen Ordner (mit level.dat) oder ZIP/TAR in lokales servers/<id>/worlds oder in die Weltenbibliothek hoch.',
   worldsRestartNoticeStopped: 'Der Server ist gestoppt. Die ausgewählte Welt wird beim nächsten Start angewendet.',
+  worldsRestartNoticeRunning: 'Die aktive Welt wird nicht verändert. Speichern Sie die Auswahl jetzt, damit sie nach dem nächsten Neustart angewendet wird.',
   allLabel: 'Alle',
   worldSourceLocal: 'Lokal',
   worldSourceLibrary: 'Weltenbibliothek',

@@ -22,9 +22,10 @@ import { LINK_CONNECTIVITY_SETTINGS } from '@/lib/providers/constants';
 interface NetworkTabProps {
   config: ServerConfig;
   updateConfig: <K extends keyof ServerConfig>(field: K, value: ServerConfig[K]) => void;
+  readOnly?: boolean;
 }
 
-export const NetworkTab: FC<NetworkTabProps> = ({ config, updateConfig }) => {
+export const NetworkTab: FC<NetworkTabProps> = ({ config, updateConfig, readOnly = false }) => {
   const { t } = useLanguage();
   const [proxyEnabled, setProxyEnabled] = useState(false);
   const [autoScaleAvailable, setAutoScaleAvailable] = useState(false);
@@ -105,6 +106,13 @@ export const NetworkTab: FC<NetworkTabProps> = ({ config, updateConfig }) => {
       </CardHeader>
 
       <CardContent className="space-y-4">
+        {readOnly && (
+          <Alert className="bg-amber-900/30 border-amber-800 text-amber-200">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{t('runningTabReadOnlyDesc')}</AlertDescription>
+          </Alert>
+        )}
+
         <div className="space-y-4 p-4 rounded-md bg-gray-800/50 border border-gray-700/50">
           <div className="space-y-2">
             <Label htmlFor="serverPort" className="text-gray-200 font-minecraft text-sm">
@@ -116,8 +124,8 @@ export const NetworkTab: FC<NetworkTabProps> = ({ config, updateConfig }) => {
               value={serverUsesProxy ? defaultPort : config.port || defaultPort}
               onChange={(e) => updateConfig('port', String(e.target.value))}
               placeholder={defaultPort}
-              disabled={serverUsesProxy}
-              className={`bg-gray-800/70 border-gray-700/50 focus:border-emerald-500/50 focus:ring-emerald-500/30 ${serverUsesProxy ? 'opacity-50 cursor-not-allowed' : ''}`}
+              disabled={readOnly || serverUsesProxy}
+              className={`bg-gray-800/70 border-gray-700/50 focus:border-emerald-500/50 focus:ring-emerald-500/30 ${readOnly || serverUsesProxy ? 'opacity-50 cursor-not-allowed' : ''}`}
             />
             <p className="text-xs text-gray-400">{t('serverPortDesc')}</p>
             {serverUsesProxy ? (
@@ -157,6 +165,7 @@ export const NetworkTab: FC<NetworkTabProps> = ({ config, updateConfig }) => {
                 type="number"
                 value={config.serverPortV6 ?? ''}
                 onChange={(e) => updateConfig('serverPortV6', e.target.value)}
+                disabled={readOnly}
                 placeholder="19133"
                 className="bg-gray-800/70 border-gray-700/50 text-white"
               />
@@ -178,6 +187,7 @@ export const NetworkTab: FC<NetworkTabProps> = ({ config, updateConfig }) => {
                   id="preventProxyConnections"
                   checked={config.preventProxyConnections === true}
                   onCheckedChange={(checked) => updateConfig('preventProxyConnections', checked)}
+                  disabled={readOnly}
                 />
               </div>
               <p className="text-xs text-gray-400">{t('preventProxyConnectionsDesc')}</p>
@@ -225,6 +235,7 @@ export const NetworkTab: FC<NetworkTabProps> = ({ config, updateConfig }) => {
                     id="proxyHostname"
                     value={config.proxyHostname || ''}
                     onChange={(e) => updateConfig('proxyHostname', e.target.value)}
+                    disabled={readOnly}
                     placeholder={`${config.id}.mc.example.com`}
                     className="bg-gray-800/70 border-gray-700/50 focus:border-cyan-500/50 focus:ring-cyan-500/30"
                   />
@@ -240,6 +251,7 @@ export const NetworkTab: FC<NetworkTabProps> = ({ config, updateConfig }) => {
                       id="useProxy"
                       checked={config.useProxy !== false}
                       onCheckedChange={(checked) => updateConfig('useProxy', checked)}
+                      disabled={readOnly}
                     />
                   </div>
                   <p className="text-xs text-gray-400">{t('useProxyDesc')}</p>
@@ -255,6 +267,7 @@ export const NetworkTab: FC<NetworkTabProps> = ({ config, updateConfig }) => {
                         id="useAutoScale"
                         checked={config.useAutoScale !== false}
                         onCheckedChange={(checked) => updateConfig('useAutoScale', checked)}
+                        disabled={readOnly}
                       />
                     </div>
                     <p className="text-xs text-gray-400">{t('useAutoScaleDesc')}</p>
@@ -298,6 +311,7 @@ export const NetworkTab: FC<NetworkTabProps> = ({ config, updateConfig }) => {
               <Input
                 value={newPort}
                 onChange={(e) => setNewPort(e.target.value)}
+                disabled={readOnly}
                 placeholder={t('portFormat')}
                 className="bg-gray-800/70 text-gray-200 border-gray-700/50 focus:border-emerald-500/50 focus:ring-emerald-500/30"
                 onKeyDown={(e) => {
@@ -311,6 +325,7 @@ export const NetworkTab: FC<NetworkTabProps> = ({ config, updateConfig }) => {
             <Button
               type="button"
               onClick={addExtraPort}
+              disabled={readOnly}
               className="bg-emerald-600 hover:bg-emerald-700 text-white"
             >
               <Plus className="h-4 w-4" />
@@ -326,6 +341,7 @@ export const NetworkTab: FC<NetworkTabProps> = ({ config, updateConfig }) => {
                     <Input
                       value={port}
                       onChange={(e) => updateExtraPort(index, e.target.value)}
+                      disabled={readOnly}
                       className="bg-gray-800/70 text-gray-200 border-gray-700/50 focus:border-emerald-500/50 focus:ring-emerald-500/30 font-mono text-sm"
                     />
                     <Button
@@ -333,6 +349,7 @@ export const NetworkTab: FC<NetworkTabProps> = ({ config, updateConfig }) => {
                       variant="ghost"
                       size="icon"
                       onClick={() => removeExtraPort(index)}
+                      disabled={readOnly}
                       className="text-red-400 hover:text-red-300 hover:bg-red-900/30"
                     >
                       <Trash2 className="h-4 w-4" />

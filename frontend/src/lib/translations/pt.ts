@@ -467,7 +467,9 @@ export const pt: Record<TranslationKey, string> = {
   autoSaveActive: 'Ativo',
   serverRunningWarning: 'Servidor em Execução',
   serverRunningWarningDesc:
-    'Não é possível editar a configuração enquanto o servidor está em execução. Pare o servidor para fazer alterações.',
+    'Você pode revisar e salvar a configuração agora. As alterações salvas serão aplicadas após a próxima reinicialização. A rede, as credenciais RCON, os addons e os arquivos ativos permanecem somente leitura.',
+  runningTabReadOnlyDesc:
+    'Esta seção pode afetar a rede ou os arquivos ativos. Você pode consultá-la agora, mas precisa parar o servidor para editá-la.',
   unsavedChanges: 'Alterações não Salvas',
   allChangesSaved: 'Todas as Alterações Salvas',
   failedToFetchVersions: 'Erro ao obter as versões',
@@ -1748,6 +1750,7 @@ export const pt: Record<TranslationKey, string> = {
   worldsEmpty:
     'Nenhum mundo encontrado. Envie uma pasta (com level.dat) ou ZIP/TAR para servers/<id>/worlds local ou para a Biblioteca de mundos.',
   worldsRestartNoticeStopped: 'O servidor está parado. O mundo selecionado será aplicado na próxima inicialização.',
+  worldsRestartNoticeRunning: 'O mundo ativo não será alterado. Salve esta seleção agora para aplicá-la após a próxima reinicialização.',
   allLabel: 'Todos',
   worldSourceLocal: 'Local',
   worldSourceLibrary: 'Biblioteca de mundos',
