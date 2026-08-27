@@ -1,7 +1,10 @@
 import {
   BadRequestException,
+  ConflictException,
+  forwardRef,
   HttpException,
   HttpStatus,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
@@ -12,6 +15,7 @@ import * as AdmZip from 'adm-zip';
 import * as fs from 'fs-extra';
 import * as path from 'node:path';
 import { DockerComposeService } from 'src/docker-compose/docker-compose.service';
+import { ServerManagementService } from 'src/server-management/server-management.service';
 import { SettingsService } from 'src/users/services/settings.service';
 import { ImportBedrockAddonDto } from './dto/import-bedrock-addon.dto';
 
@@ -69,6 +73,8 @@ export class BedrockAddonsService {
     private readonly configService: ConfigService,
     private readonly settingsService: SettingsService,
     private readonly dockerComposeService: DockerComposeService,
+    @Inject(forwardRef(() => ServerManagementService))
+    private readonly serverManagementService: ServerManagementService,
   ) {
     this.SERVERS_DIR = this.configService.get<string>('serversDir');
     fs.ensureDirSync(this.SERVERS_DIR);
@@ -260,6 +266,7 @@ export class BedrockAddonsService {
 
   async reorderAddons(serverId: string, addonIds: string[]) {
     await this.ensureServerDirectories(serverId);
+    await this.assertServerStoppedForReorder(serverId);
     const registry = await this.readRegistry(serverId);
 
     const byId = new Map(registry.addons.map((addon) => [addon.id, addon]));
@@ -675,6 +682,13 @@ export class BedrockAddonsService {
     await fs.ensureDir(this.getDownloadsPath(serverId));
     await fs.ensureDir(this.getExtractedPath(serverId));
     await fs.ensureDir(this.getMcDataPath(serverId));
+  }
+
+  private async assertServerStoppedForReorder(serverId: string) {
+    const status = await this.serverManagementService.getServerStatus(serverId);
+    if (status === 'running' || status === 'starting') {
+      throw new ConflictException('Stop the server before changing Bedrock add-on order');
+    }
   }
 
   private async ensureBedrockServer(serverId: string) {

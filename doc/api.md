@@ -255,6 +255,9 @@ Bedrock addon management:
 - `POST /bedrock-addons/:serverId/:addonId/disable`
 - `DELETE /bedrock-addons/:serverId/:addonId`
 
+The order endpoint returns `409 Conflict` while the server is running or starting.
+This prevents priority changes from rewriting the active world's pack files.
+
 ### Proxy
 
 mc-router proxy status and mapping management:
