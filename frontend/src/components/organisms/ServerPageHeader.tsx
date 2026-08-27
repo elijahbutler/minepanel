@@ -9,6 +9,7 @@ import { useState } from "react";
 import { ServerConnectionInfo } from "@/components/molecules/ServerConnectionInfo";
 import { getStatusIcon, getStatusBadgeClass } from "@/lib/utils/server-status";
 import { ServerEdition } from "@/lib/types/types";
+import { ServerRuntimeStats } from "@/components/molecules/ServerRuntimeStats";
 
 interface ServerPageHeaderProps {
   readonly serverId: string;
@@ -161,6 +162,10 @@ export function ServerPageHeader({ serverId, serverName, serverStatus, serverPor
           </AlertDialog>
         </div>
       </div>
+
+      {serverStatus === "running" && (
+        <ServerRuntimeStats serverId={serverId} serverStatus={serverStatus} />
+      )}
 
       {serverStatus === "running" && (
         <div className="animate-fade-in-up">

@@ -44,7 +44,7 @@ export const apiClearServerData = async (serverId: string): Promise<{ success: b
   return response.data;
 };
 
-export const getServerStatus = async (serverId: string): Promise<{ status: "running" | "stopped" | "not_found" }> => {
+export const getServerStatus = async (serverId: string): Promise<{ status: "running" | "stopped" | "starting" | "not_found" }> => {
   const response = await api.get(`/servers/${serverId}/status`);
   return response.data;
 };
@@ -191,6 +191,24 @@ export type ServerResourceInfo = {
 
 export const getAllServersResources = async (): Promise<Record<string, ServerResourceInfo>> => {
   const response = await api.get(`/servers/all-resources`);
+  return response.data;
+};
+
+export type ServerRuntimeStats = ServerResourceInfo & {
+  playersOnline: number | null;
+  playersMax: number | null;
+  uptimeSeconds: number | null;
+  version: string | null;
+  gameReachable: boolean;
+};
+
+export const getServerRuntimeStats = async (serverId: string): Promise<ServerRuntimeStats> => {
+  const response = await api.get(`/servers/${serverId}/runtime-stats`);
+  return response.data;
+};
+
+export const getAllServersRuntimeStats = async (): Promise<Record<string, ServerRuntimeStats>> => {
+  const response = await api.get(`/servers/all-runtime-stats`);
   return response.data;
 };
 

@@ -3,9 +3,15 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Cpu, Activity, Server, AlertTriangle, ArrowRight } from "lucide-react";
-import { getAllServersResources, ServerResourceInfo } from "@/services/docker/fetchs";
+import { Cpu, Activity, Server, AlertTriangle, ArrowRight, Clock3, Users } from "lucide-react";
+import { getAllServersRuntimeStats, ServerRuntimeStats } from "@/services/docker/fetchs";
 import { useLanguage } from "@/lib/hooks/useLanguage";
+import {
+  formatPlayerCount,
+  formatServerUptime,
+  getServerCpuPercent,
+  getServerMemoryPercent,
+} from "@/lib/utils/server-runtime-stats";
 
 interface ServerQuickViewProps {
   servers: Array<{ id: string; serverName?: string }>;
@@ -15,53 +21,10 @@ type ServerWithResources = {
   id: string;
   name: string;
   status: "running" | "stopped" | "starting" | "not_found";
-  cpuUsage: number;
-  cpuLimit: number;
   cpuPercent: number;
-  memoryUsage: string;
   memoryPercent: number;
+  runtimeStats: ServerRuntimeStats;
 };
-
-function parsePercentage(value: string): number {
-  const match = value.match(/[\d.]+/);
-  return match ? parseFloat(match[0]) : 0;
-}
-
-function parseCpuLimit(limit: string): number {
-  const value = parseFloat(limit);
-  return isNaN(value) ? 1 : value;
-}
-
-function parseMemorySize(str: string): number {
-  const match = str.match(/([\d.]+)\s*([KMGT]?i?B?)/i);
-  if (!match) return 0;
-  const value = parseFloat(match[1]);
-  const unit = match[2].toUpperCase();
-  const multipliers: Record<string, number> = {
-    "": 1,
-    B: 1,
-    K: 1024,
-    KB: 1024,
-    KIB: 1024,
-    M: 1024 ** 2,
-    MB: 1024 ** 2,
-    MIB: 1024 ** 2,
-    G: 1024 ** 3,
-    GB: 1024 ** 3,
-    GIB: 1024 ** 3,
-    T: 1024 ** 4,
-    TB: 1024 ** 4,
-    TIB: 1024 ** 4,
-  };
-  return value * (multipliers[unit] || 1);
-}
-
-function parseMemoryToPercent(usage: string, configLimit: string): number {
-  if (usage === "N/A" || !configLimit) return 0;
-  const usedBytes = parseMemorySize(usage);
-  const limitBytes = parseMemorySize(configLimit);
-  return limitBytes > 0 ? (usedBytes / limitBytes) * 100 : 0;
-}
 
 export function ServerQuickView({ servers }: ServerQuickViewProps) {
   const { t } = useLanguage();
@@ -76,33 +39,30 @@ export function ServerQuickView({ servers }: ServerQuickViewProps) {
     }
 
     try {
-      const resources = await getAllServersResources();
+      const resources = await getAllServersRuntimeStats();
 
       const data: ServerWithResources[] = servers.map((server) => {
-        const res: ServerResourceInfo = resources[server.id] || {
+        const res: ServerRuntimeStats = resources[server.id] || {
           status: "not_found",
           cpuUsage: "N/A",
           memoryUsage: "N/A",
           memoryLimit: "N/A",
           cpuLimit: "1",
           memoryConfigLimit: "4G",
+          playersOnline: null,
+          playersMax: null,
+          uptimeSeconds: null,
+          version: null,
+          gameReachable: false,
         };
-
-        const cpuUsage = parsePercentage(res.cpuUsage);
-        const cpuLimit = parseCpuLimit(res.cpuLimit);
-        // CPU usage is relative to system, limit is number of cores
-        // 100% per core, so cpuLimit=2 means max 200%
-        const cpuPercent = cpuLimit > 0 ? (cpuUsage / (cpuLimit * 100)) * 100 : 0;
 
         return {
           id: server.id,
           name: server.serverName || server.id,
           status: res.status,
-          cpuUsage,
-          cpuLimit,
-          cpuPercent,
-          memoryUsage: res.memoryUsage,
-          memoryPercent: parseMemoryToPercent(res.memoryUsage, res.memoryConfigLimit),
+          cpuPercent: getServerCpuPercent(res) ?? 0,
+          memoryPercent: getServerMemoryPercent(res) ?? 0,
+          runtimeStats: res,
         };
       });
 
@@ -178,25 +138,39 @@ export function ServerQuickView({ servers }: ServerQuickViewProps) {
                   </div>
 
                   {server.status === "running" && (
-                    <div className="grid grid-cols-2 gap-3 mt-2">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-1 text-xs text-gray-400 font-minecraft">
-                          <Cpu className="w-3 h-3" />
-                          <span>CPU</span>
-                          <span className="ml-auto font-mono">{server.cpuPercent.toFixed(0)}%</span>
+                    <div className="mt-2 space-y-2">
+                      <div className="grid grid-cols-2 gap-2 text-xs text-gray-300">
+                        <div className="mc-tag flex min-w-0 items-center gap-1.5 px-2 py-1">
+                          <Users className="h-3 w-3 shrink-0 text-emerald-300" />
+                          <span className="font-minecraft text-[10px] text-gray-400">{t("players")}</span>
+                          <span className="ml-auto truncate font-mono text-white">{formatPlayerCount(server.runtimeStats)}</span>
                         </div>
-                        <div className="mc-bar h-2.5">
-                          <div className="mc-bar__fill" style={{ width: `${Math.min(server.cpuPercent, 100)}%`, backgroundColor: getUsageColor(server.cpuPercent) }} />
+                        <div className="mc-tag flex min-w-0 items-center gap-1.5 px-2 py-1">
+                          <Clock3 className="h-3 w-3 shrink-0 text-cyan-300" />
+                          <span className="font-minecraft text-[10px] text-gray-400">{t("uptime")}</span>
+                          <span className="ml-auto truncate font-mono text-white">{formatServerUptime(server.runtimeStats.uptimeSeconds)}</span>
                         </div>
                       </div>
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-1 text-xs text-gray-400 font-minecraft">
-                          <Activity className="w-3 h-3" />
-                          <span>RAM</span>
-                          <span className="ml-auto font-mono">{server.memoryPercent.toFixed(0)}%</span>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1 text-xs text-gray-400 font-minecraft">
+                            <Cpu className="w-3 h-3" />
+                            <span>{t("cpu")}</span>
+                            <span className="ml-auto font-mono">{server.cpuPercent.toFixed(0)}%</span>
+                          </div>
+                          <div className="mc-bar h-2.5">
+                            <div className="mc-bar__fill" style={{ width: `${Math.min(server.cpuPercent, 100)}%`, backgroundColor: getUsageColor(server.cpuPercent) }} />
+                          </div>
                         </div>
-                        <div className="mc-bar h-2.5">
-                          <div className="mc-bar__fill" style={{ width: `${Math.min(server.memoryPercent, 100)}%`, backgroundColor: getUsageColor(server.memoryPercent) }} />
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1 text-xs text-gray-400 font-minecraft">
+                            <Activity className="w-3 h-3" />
+                            <span>{t("memory")}</span>
+                            <span className="ml-auto font-mono">{server.memoryPercent.toFixed(0)}%</span>
+                          </div>
+                          <div className="mc-bar h-2.5">
+                            <div className="mc-bar__fill" style={{ width: `${Math.min(server.memoryPercent, 100)}%`, backgroundColor: getUsageColor(server.memoryPercent) }} />
+                          </div>
                         </div>
                       </div>
                     </div>

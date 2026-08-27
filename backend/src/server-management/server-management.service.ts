@@ -43,6 +43,42 @@ const DOCKER_COMMANDS = {
 
 export type ServerStatus = 'running' | 'stopped' | 'starting' | 'not_found';
 
+export interface ServerResourceInfo {
+  status: ServerStatus;
+  cpuUsage: string;
+  memoryUsage: string;
+  memoryLimit: string;
+  cpuLimit: string;
+  memoryConfigLimit: string;
+}
+
+export interface ServerRuntimeStats extends ServerResourceInfo {
+  playersOnline: number | null;
+  playersMax: number | null;
+  uptimeSeconds: number | null;
+  version: string | null;
+  gameReachable: boolean;
+}
+
+export interface MinecraftStatusProbe {
+  playersOnline: number;
+  playersMax: number;
+  version: string;
+}
+
+export function parseMinecraftStatusOutput(output: string): MinecraftStatusProbe | null {
+  const match = /version=(.*?)\s+online=(\d+)\s+max=(\d+)(?:\s|$)/i.exec(output.trim());
+  if (!match) {
+    return null;
+  }
+
+  return {
+    version: match[1].trim(),
+    playersOnline: Number.parseInt(match[2], 10),
+    playersMax: Number.parseInt(match[3], 10),
+  };
+}
+
 export interface ServerInfo {
   exists: boolean;
   status: ServerStatus;
@@ -1024,19 +1060,7 @@ export class ServerManagementService {
     }
   }
 
-  async getAllServersResources(): Promise<
-    Record<
-      string,
-      {
-        status: ServerStatus;
-        cpuUsage: string;
-        memoryUsage: string;
-        memoryLimit: string;
-        cpuLimit: string;
-        memoryConfigLimit: string;
-      }
-    >
-  > {
+  async getAllServersResources(): Promise<Record<string, ServerResourceInfo>> {
     try {
       const directories = await fs.readdir(this.SERVERS_DIR);
       const serverDirectories = await Promise.all(
@@ -1096,7 +1120,7 @@ export class ServerManagementService {
           acc[serverId] = data;
           return acc;
         },
-        {} as Record<string, { status: ServerStatus; cpuUsage: string; memoryUsage: string; memoryLimit: string; cpuLimit: string; memoryConfigLimit: string }>,
+        {} as Record<string, ServerResourceInfo>,
       );
     } catch (error) {
       this.logger.error('Error obtaining all servers resources', error);
@@ -1142,6 +1166,174 @@ export class ServerManagementService {
       this.logger.warn('Failed to get all containers stats:', error);
       return { byId: {}, byName: {} };
     }
+  }
+
+  private async queryMinecraftStatus(containerId: string, edition: ServerEdition): Promise<MinecraftStatusProbe | null> {
+    const internalPort = edition === 'BEDROCK' ? '19132' : '25565';
+    const subcommand = edition === 'BEDROCK' ? 'status-bedrock' : 'status';
+    const args = ['exec', containerId, 'mc-monitor', subcommand, '--host', '127.0.0.1', '--port', internalPort];
+
+    if (edition === 'JAVA') {
+      args.push('--timeout', '3s');
+    }
+
+    try {
+      const { stdout, exitCode } = await this.executeProcess('docker', args, { timeout: 4_000 });
+      if (exitCode !== 0) {
+        return null;
+      }
+      return parseMinecraftStatusOutput(this.sanitizeCommandOutput(stdout));
+    } catch (error) {
+      this.logger.debug(`Minecraft status probe failed for container ${containerId}: ${(error as Error).message}`);
+      return null;
+    }
+  }
+
+  private async getContainerUptimeSeconds(containerId: string): Promise<number | null> {
+    try {
+      const { stdout, exitCode } = await this.executeProcess(
+        'docker',
+        ['inspect', '--format={{.State.StartedAt}}', containerId],
+        { timeout: 3_000 },
+      );
+      if (exitCode !== 0) {
+        return null;
+      }
+
+      const startedAt = Date.parse(stdout.trim());
+      const now = Date.now();
+      if (!Number.isFinite(startedAt) || startedAt <= 0 || startedAt > now) {
+        return null;
+      }
+      return Math.floor((now - startedAt) / 1_000);
+    } catch (error) {
+      this.logger.debug(`Could not read uptime for container ${containerId}: ${(error as Error).message}`);
+      return null;
+    }
+  }
+
+  private async getRuntimeProbeConfig(serverId: string): Promise<{
+    edition: ServerEdition;
+    playersMax: number | null;
+  }> {
+    try {
+      const config = await this.composeService.getServerConfig(serverId);
+      const maxPlayers = Number.parseInt(config?.maxPlayers ?? '', 10);
+      return {
+        edition: config?.edition === 'BEDROCK' ? 'BEDROCK' : 'JAVA',
+        playersMax: Number.isFinite(maxPlayers) && maxPlayers >= 0 ? maxPlayers : null,
+      };
+    } catch (error) {
+      this.logger.debug(`Could not read runtime config for ${serverId}: ${(error as Error).message}`);
+      return { edition: 'JAVA', playersMax: null };
+    }
+  }
+
+  private emptyRuntimeStats(resource: ServerResourceInfo): ServerRuntimeStats {
+    return {
+      ...resource,
+      playersOnline: null,
+      playersMax: null,
+      uptimeSeconds: null,
+      version: null,
+      gameReachable: false,
+    };
+  }
+
+  async getServerRuntimeStats(serverId: string): Promise<ServerRuntimeStats> {
+    const unavailable: ServerResourceInfo = {
+      status: 'not_found',
+      cpuUsage: 'N/A',
+      memoryUsage: 'N/A',
+      memoryLimit: 'N/A',
+      cpuLimit: '1',
+      memoryConfigLimit: '4G',
+    };
+
+    if (!this.validateServerId(serverId)) {
+      return this.emptyRuntimeStats(unavailable);
+    }
+
+    try {
+      const [status, limits, containerId, probeConfig] = await Promise.all([
+        this.getServerStatus(serverId),
+        this.getServerLimits(serverId),
+        this.findContainerId(serverId),
+        this.getRuntimeProbeConfig(serverId),
+      ]);
+      const base: ServerResourceInfo = {
+        ...unavailable,
+        status,
+        cpuLimit: limits.cpuLimit,
+        memoryConfigLimit: limits.memoryLimit,
+      };
+
+      if (status !== 'running' || !containerId) {
+        return this.emptyRuntimeStats(base);
+      }
+
+      const [resources, gameStatus, uptimeSeconds] = await Promise.all([
+        this.getServerResources(serverId),
+        this.queryMinecraftStatus(containerId, probeConfig.edition),
+        this.getContainerUptimeSeconds(containerId),
+      ]);
+
+      return {
+        ...base,
+        ...resources,
+        playersOnline: gameStatus?.playersOnline ?? null,
+        playersMax: gameStatus?.playersMax ?? probeConfig.playersMax,
+        uptimeSeconds,
+        version: gameStatus?.version ?? null,
+        gameReachable: gameStatus !== null,
+      };
+    } catch (error) {
+      this.logger.warn(`Failed to get runtime stats for ${serverId}: ${(error as Error).message}`);
+      return this.emptyRuntimeStats(unavailable);
+    }
+  }
+
+  async getAllServersRuntimeStats(): Promise<Record<string, ServerRuntimeStats>> {
+    const resources = await this.getAllServersResources();
+    const entries = await Promise.all(
+      Object.entries(resources).map(async ([serverId, resource]) => {
+        if (resource.status !== 'running') {
+          return [serverId, this.emptyRuntimeStats(resource)] as const;
+        }
+
+        try {
+          const [containerId, probeConfig] = await Promise.all([
+            this.findContainerId(serverId),
+            this.getRuntimeProbeConfig(serverId),
+          ]);
+          if (!containerId) {
+            return [serverId, this.emptyRuntimeStats(resource)] as const;
+          }
+
+          const [gameStatus, uptimeSeconds] = await Promise.all([
+            this.queryMinecraftStatus(containerId, probeConfig.edition),
+            this.getContainerUptimeSeconds(containerId),
+          ]);
+
+          return [
+            serverId,
+            {
+              ...resource,
+              playersOnline: gameStatus?.playersOnline ?? null,
+              playersMax: gameStatus?.playersMax ?? probeConfig.playersMax,
+              uptimeSeconds,
+              version: gameStatus?.version ?? null,
+              gameReachable: gameStatus !== null,
+            },
+          ] as const;
+        } catch (error) {
+          this.logger.warn(`Failed to get runtime stats for ${serverId}: ${(error as Error).message}`);
+          return [serverId, this.emptyRuntimeStats(resource)] as const;
+        }
+      }),
+    );
+
+    return Object.fromEntries(entries);
   }
 
   private formatBytes(bytes: number, decimals = 2): string {
