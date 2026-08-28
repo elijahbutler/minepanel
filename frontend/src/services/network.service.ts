@@ -38,13 +38,17 @@ export async function getServerNetworkInfo(): Promise<NetworkInfo> {
 
 export async function getPublicIP(): Promise<string> {
   try {
-    const response = await fetch('https://api.ipify.org?format=json');
+    const response = await fetch('https://api.ipify.org?format=json', {
+      signal: AbortSignal.timeout(3000),
+    });
     const data: PublicIPResponse = await response.json();
     return data.ip;
   } catch (error) {
     console.error('Error fetching public IP:', error);
     try {
-      const response = await fetch('https://api.my-ip.io/ip');
+      const response = await fetch('https://api.my-ip.io/ip', {
+        signal: AbortSignal.timeout(3000),
+      });
       const ip = await response.text();
       return ip.trim();
     } catch (fallbackError) {
