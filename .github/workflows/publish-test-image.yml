@@ -13,26 +13,24 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  HUSKY: 0
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository_owner }}/minepanel
 
 jobs:
   verify:
-    if: github.repository != 'Ketbome/minepanel' && github.ref == 'refs/heads/main'
+    if: github.repository != 'Ketbome/minepanel' && (github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v6
         with:
-          node-version: "20"
-          cache: npm
-          cache-dependency-path: |
-            backend/package-lock.json
-            frontend/package-lock.json
+          node-version: '22'
+          cache: pnpm
 
-      - run: npm ci --prefix backend
-      - run: npm ci --prefix frontend
-      - run: npm run verify
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm verify
 
   publish:
     needs: verify
