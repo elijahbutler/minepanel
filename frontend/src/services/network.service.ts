@@ -10,6 +10,22 @@ export interface PublicIPResponse {
   ip: string;
 }
 
+function getBrowserLanAddress(): string | null {
+  if (typeof window === 'undefined') return null;
+
+  const hostname = window.location.hostname.replace(/^\[|\]$/g, '').toLowerCase();
+  const octets = hostname.split('.').map(Number);
+  const isPrivateIPv4 =
+    octets.length === 4 &&
+    octets.every((octet) => Number.isInteger(octet) && octet >= 0 && octet <= 255) &&
+    (octets[0] === 10 ||
+      (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31) ||
+      (octets[0] === 192 && octets[1] === 168));
+  const isPrivateIPv6 = /^(?:fc|fd|fe[89ab])/.test(hostname);
+
+  return isPrivateIPv4 || isPrivateIPv6 || hostname.endsWith('.local') ? hostname : null;
+}
+
 export async function getServerNetworkInfo(): Promise<NetworkInfo> {
   try {
     const response = await api.get<NetworkInfo>('/system/network');
@@ -43,31 +59,34 @@ export async function getAllIPs(): Promise<{
   localIPs: string[];
   hostname: string;
 }> {
+  let networkInfo: NetworkInfo = { hostname: '', localIPs: [], publicIP: null };
+
   try {
-    const networkInfo = await getServerNetworkInfo();
-
-    let publicIP: string | null = networkInfo.publicIP;
-    if (!publicIP) {
-      try {
-        publicIP = await getPublicIP();
-      } catch {
-        publicIP = null;
-      }
-    }
-
-    return {
-      publicIP,
-      localIPs: networkInfo.localIPs,
-      hostname: networkInfo.hostname,
-    };
+    networkInfo = await getServerNetworkInfo();
   } catch (error) {
     console.error('Error fetching all IPs:', error);
-    return {
-      publicIP: null,
-      localIPs: [],
-      hostname: '',
-    };
   }
+
+  let publicIP: string | null = networkInfo.publicIP;
+  if (!publicIP) {
+    try {
+      publicIP = await getPublicIP();
+    } catch {
+      publicIP = null;
+    }
+  }
+
+  const localIPs = [...networkInfo.localIPs];
+  const browserLanAddress = getBrowserLanAddress();
+  if (browserLanAddress && !localIPs.includes(browserLanAddress)) {
+    localIPs.push(browserLanAddress);
+  }
+
+  return {
+    publicIP,
+    localIPs,
+    hostname: networkInfo.hostname,
+  };
 }
 
 export interface ProxyStatus {
