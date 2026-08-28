@@ -74,6 +74,8 @@ export interface ProxyStatus {
   available: boolean;
   enabled: boolean;
   baseDomain: string | null;
+  /** Host port the mc-router container publishes. */
+  proxyPort?: string;
   autoScaleAvailable?: boolean;
   /** Whether the mc-router container is actually up. */
   running?: boolean;
@@ -81,14 +83,18 @@ export interface ProxyStatus {
 }
 
 export async function getProxyStatus(): Promise<ProxyStatus> {
-  try {
-    const response = await api.get<ProxyStatus>('/proxy/status');
-    return response.data;
-  } catch {
-    // `running` stays undefined: reporting false here would make the UI claim the
-    // router is stopped when it just could not be reached.
-    return { available: false, enabled: false, baseDomain: null, autoScaleAvailable: false };
-  }
+  const response = await api.get<ProxyStatus>('/proxy/status');
+  return response.data;
+}
+
+export interface ProxyMapping {
+  host: string;
+  backend: string;
+}
+
+export async function getProxyMappings(): Promise<ProxyMapping[]> {
+  const response = await api.get<ProxyMapping[]>('/proxy/mappings');
+  return response.data;
 }
 
 export async function getServerProxyHostname(serverId: string): Promise<string | null> {
