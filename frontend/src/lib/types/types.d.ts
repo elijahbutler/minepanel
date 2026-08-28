@@ -123,6 +123,7 @@ export interface ServerConfig {
   resticS3SecretAccessKey: string;
   resticRetention: string;
   backupOnStartup: boolean;
+  backupBroadcastMessage: string;
   pauseIfNoPlayers: boolean;
   playersOnlineCheckInterval: string;
   rconRetries: string;
@@ -150,6 +151,7 @@ export interface ServerConfig {
   dockerVolumes?: string;
   restartPolicy: 'no' | 'always' | 'on-failure' | 'unless-stopped';
   stopDelay: string;
+  shutdownBroadcastMessage: string;
   execDirectly: boolean;
   envVars: string;
   dockerLabels?: string;

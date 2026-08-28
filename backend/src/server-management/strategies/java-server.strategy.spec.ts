@@ -143,4 +143,16 @@ describe('JavaServerStrategy', () => {
 
     expect(env.JVM_EXTRA).toBe('-Dfoo=bar=baz');
   });
+
+  it('should configure a custom shutdown broadcast', () => {
+    const config = {
+      ...baseConfig(),
+      stopDelay: '45',
+      shutdownBroadcastMessage: 'Server restarting in {seconds} seconds.',
+    } as ServerConfig;
+
+    const env = strategy.buildEnvironment(config);
+
+    expect(env.STOP_SERVER_DELAY_COMMAND).toBe('say Server restarting in 45 seconds.');
+  });
 });

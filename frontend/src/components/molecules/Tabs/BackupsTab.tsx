@@ -95,6 +95,21 @@ export const BackupsTab: FC<BackupsTabProps> = ({ config, updateConfig }) => {
 
           {config.enableBackup && (
             <div className="space-y-5 pt-2">
+              <div className="space-y-2 rounded-md border border-gray-700/50 bg-gray-900/40 p-4">
+                <Label htmlFor="backupBroadcastMessage" className="text-gray-200 font-minecraft text-sm">
+                  {t('backupBroadcastMessage')}
+                </Label>
+                <Input
+                  id="backupBroadcastMessage"
+                  maxLength={256}
+                  value={config.backupBroadcastMessage || ''}
+                  onChange={(e) => updateConfig('backupBroadcastMessage', e.target.value)}
+                  placeholder={t('backupBroadcastPlaceholder')}
+                  className="bg-gray-800/70 text-gray-200 border-gray-700/50 focus:border-emerald-500/50 focus:ring-emerald-500/30"
+                />
+                <p className="text-xs text-gray-400">{t('backupBroadcastMessageHelp')}</p>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">

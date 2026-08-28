@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsBoolean, IsEnum, IsNotEmpty, Matches } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsEnum, IsNotEmpty, Matches, MaxLength } from 'class-validator';
 import { PartialType } from '@nestjs/mapped-types';
 
 export type ServerEdition = 'JAVA' | 'BEDROCK';
@@ -335,8 +335,16 @@ export class ServerConfigDto {
   restartPolicy?: 'no' | 'always' | 'on-failure' | 'unless-stopped';
 
   @IsString()
+  @Matches(/^(?:0|[1-9]\d{0,8})?$/, {
+    message: 'stopDelay must be empty or a whole number between 0 and 999999999',
+  })
   @IsOptional()
   stopDelay?: string;
+
+  @IsString()
+  @MaxLength(256)
+  @IsOptional()
+  shutdownBroadcastMessage?: string;
 
   @IsBoolean()
   @IsOptional()
@@ -366,6 +374,11 @@ export class ServerConfigDto {
   @IsBoolean()
   @IsOptional()
   backupOnStartup?: boolean;
+
+  @IsString()
+  @MaxLength(256)
+  @IsOptional()
+  backupBroadcastMessage?: string;
 
   @IsBoolean()
   @IsOptional()

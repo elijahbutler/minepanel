@@ -37,4 +37,23 @@ describe('BedrockServerStrategy', () => {
 
     expect(env.SOME_FLAG).toBe('-Dfoo=bar=baz');
   });
+
+  it('should configure the shutdown delay and custom broadcast', () => {
+    const env = strategy.buildEnvironment({
+      id: 'bedrock-test',
+      edition: 'BEDROCK',
+      serverType: 'VANILLA',
+      serverName: 'Bedrock Test',
+      difficulty: 'normal',
+      maxPlayers: '10',
+      onlineMode: true,
+      gameMode: 'survival',
+      viewDistance: '10',
+      stopDelay: '30',
+      shutdownBroadcastMessage: 'Server stopping in {seconds} seconds.',
+    } as ServerConfig);
+
+    expect(env.STOP_SERVER_ANNOUNCE_DELAY).toBe('30');
+    expect(env.STOP_SERVER_ANNOUNCE).toBe('say Server stopping in 30 seconds.');
+  });
 });

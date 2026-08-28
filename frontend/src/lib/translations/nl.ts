@@ -732,6 +732,9 @@ export const nl: Record<TranslationKey, string> = {
   stopDelay: 'Stop vertraging (sec)',
   stopDelayDesc: 'Wachttijd voordat de server geforceerd wordt gestopt',
   stopDelayHelp: 'Tijd in seconden om te wachten voordat de server geforceerd wordt afgesloten',
+  shutdownBroadcastMessage: 'Waarschuwing bij afsluiten',
+  shutdownBroadcastPlaceholder: 'De server stopt over {seconds} seconden.',
+  shutdownBroadcastMessageHelp: 'Wordt verstuurd wanneer een normale stop of herstart begint. Gebruik {seconds} voor de ingestelde vertraging. Laat leeg om de standaardwaarschuwing te gebruiken.',
   restartPolicy: 'Herstart beleid',
   restartPolicyDesc:
     'Bepaalt hoe de container zich gedraagt wanneer deze zijn uitvoering beëindigt',
@@ -764,6 +767,9 @@ export const nl: Record<TranslationKey, string> = {
   // Backup Configuration
   backupConfig: 'Back-up configuratie',
   enableBackup: 'Back-ups inschakelen',
+  backupBroadcastMessage: 'Back-upwaarschuwing',
+  backupBroadcastPlaceholder: 'De wereldback-up begint. Er kan een korte pauze optreden.',
+  backupBroadcastMessageHelp: 'Wordt verstuurd voordat wereldopslag voor een back-up wordt gepauzeerd. Laat leeg om niets te versturen.',
   backupMethod: 'Back-up methode',
   backupMethodDesc: 'Methode gebruikt om back-ups uit te voeren',
   selectBackupMethod: 'Selecteer back-up methode',

@@ -270,12 +270,31 @@ export const LifecycleTab: FC<LifecycleTabProps> = ({ config, updateConfig }) =>
           <Input
             id="stopDelay"
             type="number"
+            min={0}
+            max={999999999}
+            step={1}
             value={config.stopDelay}
             onChange={(e) => updateConfig('stopDelay', e.target.value)}
             placeholder="60"
             className="bg-gray-800/70 text-gray-200 border-gray-700/50 focus:border-emerald-500/50 focus:ring-emerald-500/30"
           />
           <p className="text-xs text-gray-400">{t('stopDelayHelp')}</p>
+
+          <div className="space-y-2 border-t border-gray-700/50 pt-3">
+            <Label htmlFor="shutdownBroadcastMessage" className="text-xs text-gray-300">
+              {t('shutdownBroadcastMessage')}
+            </Label>
+            <Input
+              id="shutdownBroadcastMessage"
+              type="text"
+              maxLength={256}
+              value={config.shutdownBroadcastMessage || ''}
+              onChange={(e) => updateConfig('shutdownBroadcastMessage', e.target.value)}
+              placeholder={t('shutdownBroadcastPlaceholder')}
+              className="bg-gray-800/70 text-gray-200 border-gray-700/50 focus:border-emerald-500/50 focus:ring-emerald-500/30"
+            />
+            <p className="text-xs text-gray-400">{t('shutdownBroadcastMessageHelp')}</p>
+          </div>
         </div>
 
         <div className="space-y-2 p-4 rounded-md bg-gray-800/50 border border-gray-700/50">
