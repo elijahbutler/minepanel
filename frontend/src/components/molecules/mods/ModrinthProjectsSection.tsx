@@ -22,6 +22,7 @@ interface ModrinthProjectsSectionProps {
   onSearch: () => void;
 }
 
+/** Renders the Modrinth download settings shared by mod and Paper plugin tabs. */
 export function ModrinthProjectsSection({
   config,
   minecraftVersion,

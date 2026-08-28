@@ -222,6 +222,7 @@ export class ModrinthService {
       .join(' ');
   }
 
+  /** Extracts a project ref from a Modrinth URL while preserving malformed input for search. */
   private normalizeSearchQuery(query?: string): string | undefined {
     const trimmed = query?.trim();
     if (!trimmed) return undefined;
@@ -229,7 +230,13 @@ export class ModrinthService {
     const match = trimmed.match(
       /^https?:\/\/(?:www\.)?modrinth\.com\/(?:mod|plugin|datapack)\/([^/?#]+)/i,
     );
-    return match?.[1] ? decodeURIComponent(match[1]) : trimmed;
+    if (!match?.[1]) return trimmed;
+
+    try {
+      return decodeURIComponent(match[1]);
+    } catch {
+      return match[1];
+    }
   }
 
   async resolveProjects(refs: string[]): Promise<NormalizedModSearchResult[]> {

@@ -130,4 +130,26 @@ describe('ModrinthService', () => {
       supportedLoaders: ['paper'],
     });
   });
+
+  it('searchMods should preserve malformed URL encoding as a search term', async () => {
+    mockClient.get.mockResolvedValue({
+      data: {
+        hits: [],
+        offset: 0,
+        limit: 20,
+        total_hits: 0,
+      },
+    });
+
+    await service.searchMods({
+      q: 'https://modrinth.com/plugin/%',
+      minecraftVersion: '1.21.4',
+      loader: 'paper',
+      projectType: 'plugin',
+    });
+
+    expect(mockClient.get).toHaveBeenCalledWith('/search', {
+      params: expect.objectContaining({ query: '%' }),
+    });
+  });
 });
