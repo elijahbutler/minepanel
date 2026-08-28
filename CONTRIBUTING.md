@@ -51,8 +51,9 @@ Don't be a jerk. That's it.
 
 ## Running locally
 
-The repo is a pnpm workspace (`backend` + `frontend`); `pnpm install` at the root
-installs both and the git hooks. Node 22+ and pnpm 10 (`corepack enable`).
+The repo is a pnpm workspace (`backend` + `frontend` + `doc`); `pnpm install` at
+the root installs all workspace packages and the git hooks. Node 22+ and pnpm 10
+(`corepack enable`).
 
 ### Backend
 

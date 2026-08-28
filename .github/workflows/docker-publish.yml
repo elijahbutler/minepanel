@@ -106,7 +106,6 @@ jobs:
         with:
           images: ${{ secrets.DOCKERHUB_USERNAME }}/minepanel
           tags: |
-            type=raw,value=latest
             type=raw,value=${{ needs.changes.outputs.version }}
 
       - uses: docker/build-push-action@v6
@@ -120,6 +119,19 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64
+
+      - name: Promote current main image to latest
+        env:
+          IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/minepanel
+          PUBLISHED_SHA: ${{ needs.changes.outputs.sha }}
+          VERSION: ${{ needs.changes.outputs.version }}
+        run: |
+          current_main_sha=$(git ls-remote origin refs/heads/main | awk '{print $1}')
+          if [ "$PUBLISHED_SHA" != "$current_main_sha" ]; then
+            echo "Skipping latest: main advanced to $current_main_sha while this image built."
+            exit 0
+          fi
+          docker buildx imagetools create --tag "$IMAGE:latest" "$IMAGE:$VERSION"
 
   # Standalone backend - Production (main branch only)
   build-backend:
@@ -142,7 +154,6 @@ jobs:
         with:
           images: ${{ secrets.DOCKERHUB_USERNAME }}/minepanel-backend
           tags: |
-            type=raw,value=latest
             type=raw,value=${{ needs.changes.outputs.version }}
 
       - uses: docker/build-push-action@v6
@@ -157,6 +168,19 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64
+
+      - name: Promote current main image to latest
+        env:
+          IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/minepanel-backend
+          PUBLISHED_SHA: ${{ needs.changes.outputs.sha }}
+          VERSION: ${{ needs.changes.outputs.version }}
+        run: |
+          current_main_sha=$(git ls-remote origin refs/heads/main | awk '{print $1}')
+          if [ "$PUBLISHED_SHA" != "$current_main_sha" ]; then
+            echo "Skipping latest: main advanced to $current_main_sha while this image built."
+            exit 0
+          fi
+          docker buildx imagetools create --tag "$IMAGE:latest" "$IMAGE:$VERSION"
 
   # Standalone frontend - Production (main branch only)
   build-frontend:
@@ -179,7 +203,6 @@ jobs:
         with:
           images: ${{ secrets.DOCKERHUB_USERNAME }}/minepanel-frontend
           tags: |
-            type=raw,value=latest
             type=raw,value=${{ needs.changes.outputs.version }}
 
       - uses: docker/build-push-action@v6
@@ -192,6 +215,19 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64
+
+      - name: Promote current main image to latest
+        env:
+          IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/minepanel-frontend
+          PUBLISHED_SHA: ${{ needs.changes.outputs.sha }}
+          VERSION: ${{ needs.changes.outputs.version }}
+        run: |
+          current_main_sha=$(git ls-remote origin refs/heads/main | awk '{print $1}')
+          if [ "$PUBLISHED_SHA" != "$current_main_sha" ]; then
+            echo "Skipping latest: main advanced to $current_main_sha while this image built."
+            exit 0
+          fi
+          docker buildx imagetools create --tag "$IMAGE:latest" "$IMAGE:$VERSION"
 
   # Test backend - Development (non-main branches)
   build-backend-test:

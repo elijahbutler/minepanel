@@ -89,7 +89,7 @@ export default function Dashboard() {
   const [selectedTemplate, setSelectedTemplate] = useState<ServerTemplate | null>(null);
   const [selectedEdition, setSelectedEdition] = useState<ServerEdition>('JAVA');
   const [canCreateServers, setCanCreateServers] = useState(false);
-  const [proxyAddresses, setProxyAddresses] = useState<Record<string, string>>({});
+  const [proxyAddresses, setProxyAddresses] = useState<Record<string, string> | null>(null);
   const availableTemplates = getTemplatesByEdition(selectedEdition);
 
   const form = useForm<{ id: string }>({
@@ -158,19 +158,24 @@ export default function Dashboard() {
   // Proxied servers publish no host port, so the allocated one is not reachable:
   // what players use is the router hostname.
   const loadProxyAddresses = useCallback(async () => {
-    const status = await getProxyStatus();
-    if (!status.enabled) {
-      setProxyAddresses({});
-      return;
-    }
+    try {
+      const status = await getProxyStatus();
+      if (!status.enabled) {
+        setProxyAddresses({});
+        return;
+      }
 
-    const mappings = await getProxyMappings();
-    const port = status.proxyPort && status.proxyPort !== '25565' ? `:${status.proxyPort}` : '';
-    setProxyAddresses(
-      Object.fromEntries(
-        mappings.map(({ host, backend }) => [backend.split(':')[0], `${host}${port}`]),
-      ),
-    );
+      const mappings = await getProxyMappings();
+      const port = status.proxyPort && status.proxyPort !== '25565' ? `:${status.proxyPort}` : '';
+      setProxyAddresses(
+        Object.fromEntries(
+          mappings.map(({ host, backend }) => [backend.split(':')[0], `${host}${port}`]),
+        ),
+      );
+    } catch (error) {
+      console.error('Error fetching proxy addresses:', error);
+      setProxyAddresses(null);
+    }
   }, []);
 
   const fetchServersFromBackend = useCallback(async () => {
@@ -626,7 +631,11 @@ export default function Dashboard() {
                       </div>
 
                       <div className="hidden md:block shrink-0 text-right leading-tight font-mono text-xs">
-                        {proxyAddresses[server.id] ? (
+                        {proxyAddresses === null ? (
+                          <p className="text-gray-500" title={t('connectionError')}>
+                            —
+                          </p>
+                        ) : proxyAddresses[server.id] ? (
                           <p
                             className="text-gray-300 truncate max-w-40"
                             title={t('serverConnection')}

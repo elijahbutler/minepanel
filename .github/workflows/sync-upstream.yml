@@ -55,15 +55,21 @@ jobs:
             git switch --create "$SYNC_BRANCH" "origin/main"
           fi
 
+          if ! git merge --no-edit origin/main; then
+            git status --short
+            echo "::error::Fork main conflicts with the existing sync branch. Resolve the sync branch manually."
+            exit 1
+          fi
+
           if ! git merge-base --is-ancestor upstream/main HEAD; then
             if ! git merge --no-edit upstream/main; then
               git status --short
               echo "::error::Upstream changes conflict with the fork. Resolve the sync branch manually."
               exit 1
             fi
-            git push --set-upstream origin "$SYNC_BRANCH"
           fi
 
+          git push --set-upstream origin "$SYNC_BRANCH"
           echo "required=true" >> "$GITHUB_OUTPUT"
 
       - name: Open sync pull request

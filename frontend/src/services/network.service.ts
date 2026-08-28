@@ -83,14 +83,8 @@ export interface ProxyStatus {
 }
 
 export async function getProxyStatus(): Promise<ProxyStatus> {
-  try {
-    const response = await api.get<ProxyStatus>('/proxy/status');
-    return response.data;
-  } catch {
-    // `running` stays undefined: reporting false here would make the UI claim the
-    // router is stopped when it just could not be reached.
-    return { available: false, enabled: false, baseDomain: null, autoScaleAvailable: false };
-  }
+  const response = await api.get<ProxyStatus>('/proxy/status');
+  return response.data;
 }
 
 export interface ProxyMapping {
@@ -99,12 +93,8 @@ export interface ProxyMapping {
 }
 
 export async function getProxyMappings(): Promise<ProxyMapping[]> {
-  try {
-    const response = await api.get<ProxyMapping[]>('/proxy/mappings');
-    return response.data;
-  } catch {
-    return [];
-  }
+  const response = await api.get<ProxyMapping[]>('/proxy/mappings');
+  return response.data;
 }
 
 export async function getServerProxyHostname(serverId: string): Promise<string | null> {

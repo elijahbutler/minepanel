@@ -196,12 +196,12 @@ export class ServerManagementController {
 
   // The panel submits the whole server form on every save, so non-admins are only
   // blocked when a host-affecting field actually differs from what is persisted.
-  private assertCanChangeAdvancedConfig(user: Users | null, incoming: Partial<ServerConfig>, current: ServerConfig): void {
+  private assertCanChangeAdvancedConfig(user: Users, incoming: Partial<ServerConfig>, current: ServerConfig): void {
     if (this.accessControlService.isAdmin(user)) {
       return;
     }
 
-    const canChangeVersion = Boolean(user) && this.accessControlService.canUsePermission(user as Users, 'changeServerVersion');
+    const canChangeVersion = this.accessControlService.canUsePermission(user, 'changeServerVersion');
 
     // Bedrock stores its version in the same field, so this covers both editions.
     const versionChanged =
@@ -228,7 +228,7 @@ export class ServerManagementController {
     }
   }
 
-  private assertSafeNewServerConfig(user: Users | null, config: Partial<ServerConfig>): void {
+  private assertSafeNewServerConfig(user: Users, config: Partial<ServerConfig>): void {
     if (this.accessControlService.isAdmin(user)) {
       return;
     }
