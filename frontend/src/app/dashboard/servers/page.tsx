@@ -89,7 +89,9 @@ export default function Dashboard() {
   const [selectedTemplate, setSelectedTemplate] = useState<ServerTemplate | null>(null);
   const [selectedEdition, setSelectedEdition] = useState<ServerEdition>('JAVA');
   const [canCreateServers, setCanCreateServers] = useState(false);
-  const [proxyAddresses, setProxyAddresses] = useState<Record<string, string> | null>(null);
+  const [proxyAddresses, setProxyAddresses] = useState<
+    Record<string, string> | null | undefined
+  >(undefined);
   const availableTemplates = getTemplatesByEdition(selectedEdition);
 
   const form = useForm<{ id: string }>({
@@ -158,6 +160,7 @@ export default function Dashboard() {
   // Proxied servers publish no host port, so the allocated one is not reachable:
   // what players use is the router hostname.
   const loadProxyAddresses = useCallback(async () => {
+    setProxyAddresses(undefined);
     try {
       const status = await getProxyStatus();
       if (!status.enabled) {
@@ -631,7 +634,11 @@ export default function Dashboard() {
                       </div>
 
                       <div className="hidden md:block shrink-0 text-right leading-tight font-mono text-xs">
-                        {proxyAddresses === null ? (
+                        {proxyAddresses === undefined ? (
+                          <p className="text-gray-500" title={t('checkingServerStatus')}>
+                            …
+                          </p>
+                        ) : proxyAddresses === null ? (
                           <p className="text-gray-500" title={t('connectionError')}>
                             —
                           </p>
