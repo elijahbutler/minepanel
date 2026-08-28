@@ -72,6 +72,12 @@ Full docs at **[minepanel.ketbome.com](https://minepanel.ketbome.com)**
 - [API](https://minepanel.ketbome.com/api) — Authentication model and backend endpoints
 - [FAQ](https://minepanel.ketbome.com/faq) — Common questions
 
+### Keeping this fork in sync
+
+The `Sync Upstream` workflow checks `Ketbome/minepanel` once a day and can also run manually. It keeps one `chore/sync-upstream` pull request open, then adds later upstream commits to the same branch. If a merge conflicts, the workflow stops so the conflict can be resolved by hand.
+
+GitHub Actions must be enabled for the fork. In **Settings > Actions > General**, also enable **Allow GitHub Actions to create and approve pull requests** so the workflow token can open the sync pull request. GitHub disables scheduled workflows in public repositories after 60 days without repository activity; re-enable the workflow or run it manually if that happens.
+
 ### 🔍 AI-Powered Documentation
 
 Need quick answers? You can use **[DeepWiki](https://deepwiki.com/Ketbome/minepanel)** to search our documentation using natural language and get contextual answers to your questions.
