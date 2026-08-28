@@ -5,6 +5,7 @@ node_modules/
 package-lock.json
 skills-lock.json
 .agents/
+.impeccable/
 .claude/*
 !.claude/settings.json
 servers/
