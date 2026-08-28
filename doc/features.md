@@ -52,7 +52,8 @@ instead of reporting zero players.
 
 On a running server, the compact header address menu lists the configured proxy hostname first,
 followed by public and LAN addresses. If no LAN address is configured, Minepanel can use the
-private address currently serving the dashboard as a local fallback.
+private address currently serving the dashboard as a local fallback. Selecting an address copies
+it on both HTTPS and local HTTP deployments.
 
 ## Server Control
 

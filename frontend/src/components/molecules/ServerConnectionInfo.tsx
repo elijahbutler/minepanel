@@ -36,6 +36,26 @@ function formatDirectAddress(host: string, port: string): string {
   return port ? `${normalizedHost}:${port}` : normalizedHost;
 }
 
+async function writeToClipboard(value: string): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(value);
+    return;
+  } catch {
+    const textArea = document.createElement("textarea");
+    textArea.value = value;
+    textArea.setAttribute("readonly", "");
+    textArea.style.position = "fixed";
+    textArea.style.opacity = "0";
+    document.body.appendChild(textArea);
+    textArea.select();
+    textArea.setSelectionRange(0, value.length);
+
+    const copied = document.execCommand("copy");
+    textArea.remove();
+    if (!copied) throw new Error("Clipboard copy failed");
+  }
+}
+
 export function ServerConnectionInfo({ port, serverId, edition }: ServerConnectionInfoProps) {
   const { t } = useLanguage();
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
@@ -124,7 +144,7 @@ export function ServerConnectionInfo({ port, serverId, edition }: ServerConnecti
 
   const copyToClipboard = async (address: string) => {
     try {
-      await navigator.clipboard.writeText(address);
+      await writeToClipboard(address);
       setCopiedAddress(address);
       window.setTimeout(() => setCopiedAddress((current) => (current === address ? null : current)), 2000);
       mcToast.success(t("copiedToClipboard"));
