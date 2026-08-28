@@ -51,7 +51,7 @@ If you access Minepanel over plain HTTP by local IP and login gets stuck on "Ver
 - **Multi-server** — Create and manage multiple servers from one panel
 - **Real-time monitoring** — CPU, RAM, players, and logs
 - **All server types** — Vanilla, Paper, Forge, Fabric, Purpur, and more
-- **Modpacks** — CurseForge & Modrinth integration
+- **Mods and plugins**: compatibility-filtered Modrinth search, managed versions, and CurseForge integration
 - **Automatic backups** — Scheduled backups with retention policies
 - **Proxy support** — mc-router for single-port multi-server (Java), started and configured by the panel, with optional auto-scaling (sleep when idle, wake on join) and a per-server opt-out
 - **Update notices** — release notes in the panel for every version between yours and the newest, and a one-click update for admins

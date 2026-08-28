@@ -33,6 +33,7 @@ interface ModsBrowserDialogProps {
   provider: ModProvider;
   minecraftVersion: string;
   loader?: ModLoader;
+  projectType?: ModProjectType;
   isAdded: (mod: ModSearchItem) => boolean;
   onToggle: (
     mod: ModSearchItem,
@@ -70,6 +71,7 @@ export function ModsBrowserDialog({
   provider,
   minecraftVersion,
   loader,
+  projectType: fixedProjectType,
   isAdded,
   onToggle,
 }: Readonly<ModsBrowserDialogProps>) {
@@ -92,10 +94,17 @@ export function ModsBrowserDialog({
   const pageSize = PAGE_SIZE_BY_PROVIDER[provider];
   // CurseForge data packs are a separate class that itzg cannot install, so the
   // type switch is Modrinth-only.
-  const supportsDatapacks = provider === 'modrinth';
-  const isDatapack = supportsDatapacks && projectType === 'datapack';
+  const supportsProjectTypeSwitch = provider === 'modrinth' && !fixedProjectType;
+  const activeProjectType = fixedProjectType ?? projectType;
+  const isDatapack = activeProjectType === 'datapack';
+  const isPlugin = activeProjectType === 'plugin';
   // A datapack is installed through its own loader, whatever the server runs.
   const searchLoader = isDatapack ? undefined : loader;
+  const searchLabel = isPlugin
+    ? t('searchPlugins')
+    : isDatapack
+      ? t('searchDatapacks')
+      : t('searchMods');
 
   const providerLabel = useMemo(() => {
     return provider === 'curseforge' ? 'CurseForge' : 'Modrinth';
@@ -120,7 +129,7 @@ export function ModsBrowserDialog({
           loader: searchLoader,
           sort,
           category: category === ALL_CATEGORIES ? undefined : category,
-          projectType: isDatapack ? 'datapack' : undefined,
+          projectType: activeProjectType,
           pageSize,
           index: nextPageIndex * pageSize,
           limit: pageSize,
@@ -152,8 +161,8 @@ export function ModsBrowserDialog({
         setPageIndex(nextPageIndex);
       } catch (error) {
         if (requestId !== requestIdRef.current) return;
-        console.error('Error searching mods:', error);
-        mcToast.error(t('errorSearchingMods'));
+        console.error('Error searching Modrinth projects:', error);
+        mcToast.error(t(isPlugin ? 'errorSearchingPlugins' : 'errorSearchingMods'));
       } finally {
         if (requestId === requestIdRef.current) {
           setIsLoadingInitial(false);
@@ -161,7 +170,19 @@ export function ModsBrowserDialog({
         }
       }
     },
-    [open, minecraftVersion, provider, query, searchLoader, sort, category, isDatapack, pageSize, t],
+    [
+      open,
+      minecraftVersion,
+      provider,
+      query,
+      searchLoader,
+      sort,
+      category,
+      activeProjectType,
+      isPlugin,
+      pageSize,
+      t,
+    ],
   );
 
   useEffect(() => {
@@ -179,7 +200,7 @@ export function ModsBrowserDialog({
     setCategory(ALL_CATEGORIES);
 
     let cancelled = false;
-    fetchModCategories(provider, isDatapack ? 'datapack' : 'mod')
+    fetchModCategories(provider, activeProjectType)
       .then((items) => {
         if (!cancelled) setCategories(items);
       })
@@ -191,7 +212,7 @@ export function ModsBrowserDialog({
     return () => {
       cancelled = true;
     };
-  }, [open, provider, isDatapack]);
+  }, [open, provider, activeProjectType]);
 
   useEffect(() => {
     if (!open) return;
@@ -202,7 +223,7 @@ export function ModsBrowserDialog({
     }, 350);
 
     return () => clearTimeout(timeout);
-  }, [open, query, provider, minecraftVersion, loader, projectType, sort, category, fetchPage]);
+  }, [open, query, provider, minecraftVersion, loader, activeProjectType, sort, category, fetchPage]);
 
   useEffect(() => {
     const target = loadMoreRef.current;
@@ -226,17 +247,17 @@ export function ModsBrowserDialog({
     const ref = insertAs === 'id' ? mod.projectId : mod.slug;
     // Added without a version, so the image resolves the newest compatible one on
     // every start. Pinning stays a deliberate choice in the mod list editor.
-    const status = onToggle(mod, insertAs, undefined, isDatapack ? 'datapack' : 'mod');
+    const status = onToggle(mod, insertAs, undefined, activeProjectType);
 
     if (status === 'added') {
-      mcToast.success(`${t('addMod')}: ${ref}`);
+      mcToast.success(`${t(isPlugin ? 'addPlugin' : 'addMod')}: ${ref}`);
       return;
     }
     if (status === 'removed') {
-      mcToast.success(t('removeMod'));
+      mcToast.success(t(isPlugin ? 'removePlugin' : 'removeMod'));
       return;
     }
-    mcToast.error(t('alreadyAdded'));
+    mcToast.error(t(isPlugin ? 'pluginAlreadyAdded' : 'alreadyAdded'));
   };
 
   return (
@@ -246,10 +267,11 @@ export function ModsBrowserDialog({
           <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
             <DialogTitle className="text-xl font-minecraft text-emerald-400 flex items-center gap-2">
               <Search className="h-5 w-5" />
-              {isDatapack ? t('searchDatapacks') : t('searchMods')} - {providerLabel}
+              {searchLabel} - {providerLabel}
             </DialogTitle>
             <p className="text-xs text-gray-400">
-              {t('searchModsDesc')} <span className="text-gray-200">{minecraftVersion}</span>
+              {t(isPlugin ? 'searchPluginsDesc' : 'searchModsDesc')}{' '}
+              <span className="text-gray-200">{minecraftVersion}</span>
               {!isDatapack && loader ? <span className="text-gray-200"> / {loader}</span> : ''}
             </p>
           </div>
@@ -259,12 +281,14 @@ export function ModsBrowserDialog({
               <Input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder={t('searchMods')}
+                placeholder={isPlugin ? t('searchPluginsPlaceholder') : searchLabel}
                 className="h-11 pl-10 bg-gray-800 border-gray-600/80 text-white font-minecraft tracking-wide focus:border-emerald-500/60"
               />
             </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {supportsDatapacks && (
+            <div
+              className={`grid grid-cols-1 gap-3 sm:grid-cols-2 ${supportsProjectTypeSwitch ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}
+            >
+              {supportsProjectTypeSwitch && (
                 <Select
                   value={projectType}
                   onValueChange={(value: ModProjectType) => setProjectType(value)}
@@ -345,7 +369,9 @@ export function ModsBrowserDialog({
                 height={50}
                 className="opacity-60 mb-4"
               />
-              <p className="font-minecraft text-sm">{t('noCompatibleModsFound')}</p>
+              <p className="font-minecraft text-sm">
+                {t(isPlugin ? 'noCompatiblePluginsFound' : 'noCompatibleModsFound')}
+              </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -401,7 +427,7 @@ export function ModsBrowserDialog({
                         className="w-full bg-rose-600 hover:bg-rose-500 text-white"
                       >
                         <Trash2 className="h-4 w-4 mr-2" />
-                        {t('removeMod')}
+                        {t(isPlugin ? 'removePlugin' : 'removeMod')}
                       </Button>
                     ) : (
                       <Button
@@ -411,7 +437,7 @@ export function ModsBrowserDialog({
                         className="w-full bg-emerald-600 hover:bg-emerald-500 text-white"
                       >
                         <Plus className="h-4 w-4 mr-2" />
-                        {t('addMod')}
+                        {t(isPlugin ? 'addPlugin' : 'addMod')}
                       </Button>
                     )}
                   </div>

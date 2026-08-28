@@ -24,12 +24,12 @@ export class SearchModrinthModsQueryDto {
   minecraftVersion: string;
 
   @IsOptional()
-  @IsEnum(['forge', 'neoforge', 'fabric', 'quilt'])
-  loader?: 'forge' | 'neoforge' | 'fabric' | 'quilt';
+  @IsEnum(['forge', 'neoforge', 'fabric', 'quilt', 'paper'])
+  loader?: 'forge' | 'neoforge' | 'fabric' | 'quilt' | 'paper';
 
   @IsOptional()
-  @IsEnum(['mod', 'datapack'])
-  projectType?: 'mod' | 'datapack';
+  @IsEnum(['mod', 'datapack', 'plugin'])
+  projectType?: 'mod' | 'datapack' | 'plugin';
 
   @IsOptional()
   @IsEnum(['relevance', 'downloads', 'updated'])

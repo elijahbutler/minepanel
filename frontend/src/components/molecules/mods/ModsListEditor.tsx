@@ -140,6 +140,7 @@ interface ModsListEditorProps {
   value: string;
   minecraftVersion: string;
   loader?: ModLoader;
+  itemType?: 'mod' | 'plugin';
   onChange: (value: string) => void;
   onSearch: () => void;
 }
@@ -157,6 +158,7 @@ export const ModsListEditor: FC<ModsListEditorProps> = ({
   value,
   minecraftVersion,
   loader,
+  itemType = 'mod',
   onChange,
   onSearch,
 }) => {
@@ -170,6 +172,7 @@ export const ModsListEditor: FC<ModsListEditorProps> = ({
   const [latestVersions, setLatestVersions] = useState<Record<string, ModVersionItem>>({});
   const requestedRefs = useRef<Set<string>>(new Set());
   const requestedVersions = useRef<Set<string>>(new Set());
+  const isPlugin = itemType === 'plugin';
 
   const entries = useMemo(() => parseModEntries(value, provider), [value, provider]);
 
@@ -340,7 +343,7 @@ export const ModsListEditor: FC<ModsListEditorProps> = ({
           {label}
           {entries.length > 0 && (
             <span className="text-[10px] text-gray-400 font-normal">
-              {entries.length} {t('modsCount')}
+              {entries.length} {t(isPlugin ? 'pluginsCount' : 'modsCount')}
             </span>
           )}
         </Label>
@@ -351,7 +354,7 @@ export const ModsListEditor: FC<ModsListEditorProps> = ({
             rel="noopener noreferrer"
             className={`text-xs underline ${theme.link}`}
           >
-            {t('browseMods')}
+            {t(isPlugin ? 'browsePlugins' : 'browseMods')}
           </a>
           <Button
             type="button"
@@ -361,7 +364,7 @@ export const ModsListEditor: FC<ModsListEditorProps> = ({
             className={`h-8 text-xs px-3 font-minecraft ${theme.action}`}
           >
             <Search className="h-3 w-3 mr-1" />
-            {t('searchMods')}
+            {t(isPlugin ? 'searchPlugins' : 'searchMods')}
           </Button>
           <Button
             type="button"
@@ -398,8 +401,12 @@ export const ModsListEditor: FC<ModsListEditorProps> = ({
         />
       ) : entries.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-1 border-2 border-dashed border-gray-700/60 bg-gray-900/30 px-4 py-8 text-center">
-          <p className="font-minecraft text-sm text-gray-300">{t('modsListEmpty')}</p>
-          <p className="text-xs text-gray-500">{t('modsListEmptyHint')}</p>
+          <p className="font-minecraft text-sm text-gray-300">
+            {t(isPlugin ? 'pluginsListEmpty' : 'modsListEmpty')}
+          </p>
+          <p className="text-xs text-gray-500">
+            {t(isPlugin ? 'pluginsListEmptyHint' : 'modsListEmptyHint')}
+          </p>
         </div>
       ) : (
         <div className="space-y-1.5">
@@ -409,14 +416,16 @@ export const ModsListEditor: FC<ModsListEditorProps> = ({
               <Input
                 value={filter}
                 onChange={(event) => setFilter(event.target.value)}
-                placeholder={t('filterModsPlaceholder')}
+                placeholder={t(isPlugin ? 'filterPluginsPlaceholder' : 'filterModsPlaceholder')}
                 className="h-9 pl-9 bg-gray-900/70 border-gray-700/50 text-gray-200 text-xs"
               />
             </div>
           )}
 
           {visibleEntries.length === 0 ? (
-            <p className="py-6 text-center text-xs text-gray-500">{t('noModsMatchFilter')}</p>
+            <p className="py-6 text-center text-xs text-gray-500">
+              {t(isPlugin ? 'noPluginsMatchFilter' : 'noModsMatchFilter')}
+            </p>
           ) : null}
 
           {pagedEntries.map(({ entry, index }) => {
@@ -467,7 +476,7 @@ export const ModsListEditor: FC<ModsListEditorProps> = ({
                   <button
                     type="button"
                     onClick={() => toggleEntryOptional(index)}
-                    title={t('modOptionalHelp')}
+                    title={t(isPlugin ? 'pluginOptionalHelp' : 'modOptionalHelp')}
                     className={`shrink-0 border-2 px-2 py-1 text-[10px] font-minecraft uppercase transition-colors ${
                       entry.optional
                         ? 'border-sky-500/40 bg-sky-500/10 text-sky-300 hover:bg-sky-500/20'
@@ -495,7 +504,7 @@ export const ModsListEditor: FC<ModsListEditorProps> = ({
                   type="button"
                   variant="ghost"
                   size="icon"
-                  title={t('removeMod')}
+                  title={t(isPlugin ? 'removePlugin' : 'removeMod')}
                   onClick={() => removeEntry(index)}
                   className="h-8 w-8 shrink-0 bg-transparent text-gray-500 hover:bg-rose-900/30 hover:text-rose-400"
                 >

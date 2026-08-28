@@ -75,17 +75,18 @@ It preconfigures:
 
 This is a preset for faster setup. You can still edit the plugin URLs or extra ports later from the server configuration tabs.
 
-## Integrated Mod Search in Minepanel
+## Integrated Mod and Plugin Search in Minepanel
 
-Minepanel includes an integrated search dialog in the **Mods** tab for both **CurseForge Files** and **Modrinth Projects**.
+Minepanel includes an integrated search dialog for **CurseForge Files** and **Modrinth Projects**
+in the **Mods** tab. Paper servers get the same managed Modrinth interface in the **Plugins** tab.
 
 ### What it does
 
 - Searches directly from Minepanel (no need to manually browse first)
 - Filters results by current server compatibility:
   - Minecraft version
-  - Loader (Forge/Neoforge/Fabric/Quilt) when available
-- Accepts a mod name or a pasted slug (for example `moogs-end-structures`)
+  - Loader (Forge/Neoforge/Fabric/Quilt/Paper) when available
+- Accepts a project name, slug, or pasted Modrinth project link
 - On Modrinth, a **Mods / Datapacks** selector switches the search to datapacks; picked
   entries are written with the `datapack:` prefix and resolved against the datapack loader
 - Sorts results by **Relevance**, **Downloads** or **Recently updated**
@@ -107,11 +108,23 @@ Minepanel includes an integrated search dialog in the **Mods** tab for both **Cu
 6. Pick insertion format (Slug or ID)
 7. Click **Add mod**
 
+For a Paper plugin:
+
+1. Open the Paper server's **Plugins** tab
+2. In **Modrinth Plugins**, click **Search plugins**
+3. Search by name or paste a `modrinth.com/plugin/...` link
+4. Choose the slug or project ID format
+5. Click **Add plugin** and save the server
+
+The search sends Modrinth's `all_project_types=plugin` facet, the Paper loader, and the server's resolved Minecraft
+version to Modrinth. Minepanel stores the selected slug or ID in `modrinthProjects`; the generated
+container environment receives it as `MODRINTH_PROJECTS` on the next restart.
+
 The selected entries are appended to the same existing fields (`CURSEFORGE_FILES` and `MODRINTH_PROJECTS`) using newline format, preserving manual entries and avoiding duplicates.
 
-### Mod list editor
+### Managed list editor
 
-Both fields render their content as a list instead of raw text:
+The mod and Paper plugin fields render their content as a list instead of raw text:
 
 - Each mod shows its icon, name and the pinned version
 - The version dropdown lists every compatible version and includes **Latest available**
@@ -124,7 +137,7 @@ Both fields render their content as a list instead of raw text:
 - **Optional** (Modrinth only) marks a mod with itzg's `?` suffix: the server logs a
   warning and keeps starting when no compatible version exists, and the mod is left out
   of the version calculation done by `VERSION_FROM_MODRINTH_PROJECTS`
-- Past 8 mods the list shows a filter box (matches name or ID) and paginates at 10 per page
+- Past 8 entries the list shows a filter box (matches name or ID) and paginates at 10 per page
 
 ### Where the list is stored
 
@@ -160,6 +173,7 @@ Automatically download and manage mods, plugins, and datapacks from [Modrinth](h
 - ✅ Neoforge
 - ✅ CurseForge (AUTO_CURSEFORGE)
 - ✅ Modrinth Modpacks
+- ✅ Paper plugins
 
 ### How to Add Mods from Minepanel
 
@@ -601,19 +615,25 @@ Always ensure mods from both sources are compatible with your Minecraft version 
 
 ## Plugin Management (Spigot/Paper/etc)
 
-For plugin-based servers (Spigot, Paper, Bukkit, etc.), you can use Spiget:
+Paper servers have a managed **Modrinth Plugins** section in the **Plugins** tab. It mirrors the
+Mods tab with compatibility-filtered search, project icons, a visual list, version pinning,
+update notices for pinned versions, dependency selection, and a manual text mode. Unpinned entries
+resolve to the newest compatible Paper release at startup. Entries removed from
+`MODRINTH_PROJECTS` are cleaned up by the container on the next restart.
+
+Spiget remains available for plugins that are only published on SpigotMC. Enter comma-separated
+Spigot resource IDs in **Spiget Resources**:
 
 ```yaml
 environment:
   TYPE: PAPER
   VERSION: 1.21.4
-  SPIGET_RESOURCES: |
-    9089
-    28140
-    34315
+  SPIGET_RESOURCES: 28140,34315
 ```
 
 Where the numbers are Spigot resource IDs from [SpigotMC](https://www.spigotmc.org/resources/).
+Some resources do not permit automated Spiget downloads. Upload those JAR files through the file
+manager into `mc-data/plugins/` and restart the server.
 
 ## Bedrock Addons
 

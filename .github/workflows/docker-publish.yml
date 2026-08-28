@@ -66,7 +66,7 @@ jobs:
   # Main image (fullstack) - Only on main branch
   build-main:
     needs: changes
-    if: github.ref == 'refs/heads/main' && (needs.changes.outputs.root == 'true' || github.event_name == 'workflow_dispatch')
+    if: github.repository == 'Ketbome/minepanel' && github.ref == 'refs/heads/main' && (needs.changes.outputs.root == 'true' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -102,7 +102,7 @@ jobs:
   # Standalone backend - Production (main branch only)
   build-backend:
     needs: changes
-    if: github.ref == 'refs/heads/main' && (needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch')
+    if: github.repository == 'Ketbome/minepanel' && github.ref == 'refs/heads/main' && (needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -136,7 +136,7 @@ jobs:
   # Standalone frontend - Production (main branch only)
   build-frontend:
     needs: changes
-    if: github.ref == 'refs/heads/main' && (needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch')
+    if: github.repository == 'Ketbome/minepanel' && github.ref == 'refs/heads/main' && (needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -168,7 +168,7 @@ jobs:
   # Test backend - Development (non-main branches)
   build-backend-test:
     needs: changes
-    if: github.ref != 'refs/heads/main'
+    if: github.repository == 'Ketbome/minepanel' && github.ref != 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -191,7 +191,7 @@ jobs:
   # Test frontend - Development (non-main branches)
   build-frontend-test:
     needs: changes
-    if: github.ref != 'refs/heads/main'
+    if: github.repository == 'Ketbome/minepanel' && github.ref != 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -214,7 +214,7 @@ jobs:
   # Tag + GitHub release: one patch bump per merge to main
   release:
     needs: [changes, build-main]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.changes.outputs.is_new == 'true'
+    if: github.repository == 'Ketbome/minepanel' && github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.changes.outputs.is_new == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
