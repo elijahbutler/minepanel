@@ -1,4 +1,4 @@
-import { FC } from "react";
+import { FC, useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,6 +7,11 @@ import { HelpCircle, FolderOpen } from "lucide-react";
 import { ServerConfig } from "@/lib/types/types";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useLanguage } from "@/lib/hooks/useLanguage";
+import { useMinecraftVersions } from "@/lib/hooks/useMinecraftVersions";
+import { ModrinthProjectsSection } from "@/components/molecules/mods/ModrinthProjectsSection";
+import { ModsBrowserDialog } from "@/components/molecules/mods/ModsBrowserDialog";
+import { ModSearchItem } from "@/services/mods/mods-browser.service";
+import { findModEntryIndex, parseModEntries, serializeModEntries } from "@/lib/utils/mod-entries";
 import Image from "next/image";
 
 interface PluginsTabProps {
@@ -17,7 +22,47 @@ interface PluginsTabProps {
 
 export const PluginsTab: FC<PluginsTabProps> = ({ config, updateConfig, onOpenFiles }) => {
   const { t } = useLanguage();
+  const [showPluginsBrowser, setShowPluginsBrowser] = useState(false);
+  const { latestRelease } = useMinecraftVersions({ filterType: "release" });
   const isPluginServer = config.serverType === "SPIGOT" || config.serverType === "PAPER" || config.serverType === "BUKKIT" || config.serverType === "PUFFERFISH" || config.serverType === "PURPUR" || config.serverType === "LEAF" || config.serverType === "FOLIA";
+  const effectiveMinecraftVersion = useMemo(() => {
+    const current = config.minecraftVersion || "";
+    return current.toLowerCase() === "latest" && latestRelease ? latestRelease : current;
+  }, [config.minecraftVersion, latestRelease]);
+  const modrinthPluginEntries = useMemo(
+    () => parseModEntries(config.modrinthProjects || "", "modrinth"),
+    [config.modrinthProjects],
+  );
+
+  const isPluginAlreadyAdded = (plugin: ModSearchItem): boolean =>
+    findModEntryIndex(modrinthPluginEntries, [plugin.slug, plugin.projectId]) >= 0;
+
+  const togglePluginFromBrowser = (
+    plugin: ModSearchItem,
+    insertAs: "slug" | "id",
+  ): "added" | "removed" | "noop" => {
+    const index = findModEntryIndex(modrinthPluginEntries, [plugin.slug, plugin.projectId]);
+
+    if (index >= 0) {
+      updateConfig(
+        "modrinthProjects",
+        serializeModEntries(
+          modrinthPluginEntries.filter((_, entryIndex) => entryIndex !== index),
+        ),
+      );
+      return "removed";
+    }
+
+    const ref = insertAs === "id" ? plugin.projectId : plugin.slug;
+    updateConfig(
+      "modrinthProjects",
+      serializeModEntries([
+        ...modrinthPluginEntries,
+        { raw: ref, ref, separator: ":", optional: false, opaque: false },
+      ]),
+    );
+    return "added";
+  };
 
   if (!isPluginServer) {
     return (
@@ -53,38 +98,49 @@ export const PluginsTab: FC<PluginsTabProps> = ({ config, updateConfig, onOpenFi
 
       <CardContent className="space-y-6">
         {config.serverType === "PAPER" && (
-          <div className="space-y-4 p-4 rounded-md bg-gray-800/50 border border-gray-700/50">
-            <div className="flex items-center gap-2">
-              <Image src="/images/diamond.webp" alt="Paper" width={20} height={20} />
-              <h3 className="text-emerald-400 font-minecraft text-md">{t("paperConfiguration")}</h3>
-            </div>
+          <>
+            <div className="space-y-4 p-4 rounded-md bg-gray-800/50 border border-gray-700/50">
+              <div className="flex items-center gap-2">
+                <Image src="/images/diamond.webp" alt="Paper" width={20} height={20} />
+                <h3 className="text-emerald-400 font-minecraft text-md">{t("paperConfiguration")}</h3>
+              </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="paperBuild" className="text-gray-200 font-minecraft text-sm">
-                  {t("paperBuild")}
-                </Label>
-                <Input id="paperBuild" value={config.paperBuild || ""} onChange={(e) => updateConfig("paperBuild", e.target.value)} placeholder="140" className="bg-gray-800/70 text-gray-200 border-gray-700/50 focus:border-emerald-500/50" />
-                <p className="text-xs text-gray-400">{t("paperBuildDesc")}</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="paperBuild" className="text-gray-200 font-minecraft text-sm">
+                    {t("paperBuild")}
+                  </Label>
+                  <Input id="paperBuild" value={config.paperBuild || ""} onChange={(e) => updateConfig("paperBuild", e.target.value)} placeholder="140" className="bg-gray-800/70 text-gray-200 border-gray-700/50 focus:border-emerald-500/50" />
+                  <p className="text-xs text-gray-400">{t("paperBuildDesc")}</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="paperChannel" className="text-gray-200 font-minecraft text-sm">
+                    {t("paperChannel")}
+                  </Label>
+                  <Input id="paperChannel" value={config.paperChannel || ""} onChange={(e) => updateConfig("paperChannel", e.target.value)} placeholder="experimental" className="bg-gray-800/70 text-gray-200 border-gray-700/50 focus:border-emerald-500/50" />
+                  <p className="text-xs text-gray-400">{t("paperChannelDesc")}</p>
+                </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="paperChannel" className="text-gray-200 font-minecraft text-sm">
-                  {t("paperChannel")}
+                <Label htmlFor="paperDownloadUrl" className="text-gray-200 font-minecraft text-sm">
+                  {t("customDownloadUrl")}
                 </Label>
-                <Input id="paperChannel" value={config.paperChannel || ""} onChange={(e) => updateConfig("paperChannel", e.target.value)} placeholder="experimental" className="bg-gray-800/70 text-gray-200 border-gray-700/50 focus:border-emerald-500/50" />
-                <p className="text-xs text-gray-400">{t("paperChannelDesc")}</p>
+                <Input id="paperDownloadUrl" value={config.paperDownloadUrl || ""} onChange={(e) => updateConfig("paperDownloadUrl", e.target.value)} placeholder="https://..." className="bg-gray-800/70 text-gray-200 border-gray-700/50 focus:border-emerald-500/50" />
+                <p className="text-xs text-gray-400">{t("paperDownloadUrlDesc")}</p>
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="paperDownloadUrl" className="text-gray-200 font-minecraft text-sm">
-                {t("customDownloadUrl")}
-              </Label>
-              <Input id="paperDownloadUrl" value={config.paperDownloadUrl || ""} onChange={(e) => updateConfig("paperDownloadUrl", e.target.value)} placeholder="https://..." className="bg-gray-800/70 text-gray-200 border-gray-700/50 focus:border-emerald-500/50" />
-              <p className="text-xs text-gray-400">{t("paperDownloadUrlDesc")}</p>
-            </div>
-          </div>
+            <ModrinthProjectsSection
+              config={config}
+              minecraftVersion={effectiveMinecraftVersion}
+              loader="paper"
+              itemType="plugin"
+              updateConfig={updateConfig}
+              onSearch={() => setShowPluginsBrowser(true)}
+            />
+          </>
         )}
 
         {(config.serverType === "BUKKIT" || config.serverType === "SPIGOT") && (
@@ -328,6 +384,19 @@ export const PluginsTab: FC<PluginsTabProps> = ({ config, updateConfig, onOpenFi
           <p className="text-xs text-gray-400">{t("skipDownloadDefaultsDesc")}</p>
         </div>
       </CardContent>
+
+      {config.serverType === "PAPER" && (
+        <ModsBrowserDialog
+          open={showPluginsBrowser}
+          onClose={() => setShowPluginsBrowser(false)}
+          provider="modrinth"
+          minecraftVersion={effectiveMinecraftVersion}
+          loader="paper"
+          projectType="plugin"
+          isAdded={isPluginAlreadyAdded}
+          onToggle={togglePluginFromBrowser}
+        />
+      )}
     </Card>
   );
 };

@@ -1,10 +1,10 @@
 import api from "../axios.service";
 
 export type ModProvider = "curseforge" | "modrinth";
-export type ModLoader = "forge" | "neoforge" | "fabric" | "quilt";
+export type ModLoader = "forge" | "neoforge" | "fabric" | "quilt" | "paper";
 // itzg installs Modrinth datapacks through the "datapack:" prefix, which maps to
 // the datapack loader on Modrinth's side.
-export type ModProjectType = "mod" | "datapack";
+export type ModProjectType = "mod" | "datapack" | "plugin";
 export type ModVersionLoader = ModLoader | "datapack";
 export type ModSortField = "relevance" | "downloads" | "updated";
 

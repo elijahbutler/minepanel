@@ -83,14 +83,15 @@ export interface NormalizedModVersion {
   loaders: string[];
 }
 
-type ModLoaderName = 'forge' | 'neoforge' | 'fabric' | 'quilt' | 'datapack';
+type ModLoaderName = 'forge' | 'neoforge' | 'fabric' | 'quilt' | 'datapack' | 'paper';
+type ModProjectType = 'mod' | 'datapack' | 'plugin';
 type ModSortField = 'relevance' | 'downloads' | 'updated';
 
 @Injectable()
 export class ModrinthService {
   private readonly apiClient: AxiosInstance;
   private readonly MODRINTH_API_BASE = 'https://api.modrinth.com/v2';
-  private readonly KNOWN_LOADERS = ['forge', 'neoforge', 'fabric', 'quilt', 'datapack'];
+  private readonly KNOWN_LOADERS = ['forge', 'neoforge', 'fabric', 'quilt', 'datapack', 'paper'];
   private readonly MAX_RESOLVE_REFS = 50;
   private readonly CATEGORIES_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -118,7 +119,7 @@ export class ModrinthService {
     offset?: number;
     minecraftVersion: string;
     loader?: ModLoaderName;
-    projectType?: 'mod' | 'datapack';
+    projectType?: ModProjectType;
     sort?: ModSortField;
     category?: string;
   }): Promise<NormalizedModSearchResponse> {
@@ -126,9 +127,11 @@ export class ModrinthService {
     const offset = Math.max(query.offset ?? 0, 0);
 
     const versionFilter = this.resolveVersionFilter(query.minecraftVersion);
-    // Modrinth reports datapacks as project_type "mod" in the project payload,
-    // but the search facet still separates them.
-    const facets: string[][] = [[`project_type:${query.projectType ?? 'mod'}`]];
+    // Modrinth reports plugins and datapacks as project_type "mod" in project
+    // payloads. all_project_types is the stable facet for those secondary types.
+    const projectType = query.projectType ?? 'mod';
+    const projectTypeFacet = projectType === 'mod' ? 'project_type' : 'all_project_types';
+    const facets: string[][] = [[`${projectTypeFacet}:${projectType}`]];
 
     if (versionFilter) {
       facets.push([`versions:${versionFilter}`]);
@@ -149,7 +152,7 @@ export class ModrinthService {
     try {
       const response = await this.apiClient.get<ModrinthSearchResponse>('/search', {
         params: {
-          query: query.q,
+          query: this.normalizeSearchQuery(query.q),
           limit,
           offset,
           index: this.SORT_INDEX[query.sort ?? 'relevance'],
@@ -184,7 +187,7 @@ export class ModrinthService {
     }
   }
 
-  async getModCategories(projectType: 'mod' | 'datapack' = 'mod'): Promise<ModCategory[]> {
+  async getModCategories(projectType: ModProjectType = 'mod'): Promise<ModCategory[]> {
     const cached = this.modCategories.get(projectType);
     if (cached && cached.expiresAt > Date.now()) return cached.data;
 
@@ -193,8 +196,14 @@ export class ModrinthService {
         Array<{ name: string; project_type: string; header: string }>
       >('/tag/category');
 
+      // Modrinth's category endpoint still classifies plugin categories as
+      // "mod", even though search exposes plugins through all_project_types.
+      const categoryProjectType = projectType === 'plugin' ? 'mod' : projectType;
       const data = response.data
-        .filter((tag) => tag.project_type === projectType && !this.KNOWN_LOADERS.includes(tag.name))
+        .filter(
+          (tag) =>
+            tag.project_type === categoryProjectType && !this.KNOWN_LOADERS.includes(tag.name),
+        )
         .map((tag) => ({ value: tag.name, label: this.humanizeCategory(tag.name) }))
         .sort((a, b) => a.label.localeCompare(b.label));
 
@@ -211,6 +220,16 @@ export class ModrinthService {
       .split('-')
       .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
       .join(' ');
+  }
+
+  private normalizeSearchQuery(query?: string): string | undefined {
+    const trimmed = query?.trim();
+    if (!trimmed) return undefined;
+
+    const match = trimmed.match(
+      /^https?:\/\/(?:www\.)?modrinth\.com\/(?:mod|plugin|datapack)\/([^/?#]+)/i,
+    );
+    return match?.[1] ? decodeURIComponent(match[1]) : trimmed;
   }
 
   async resolveProjects(refs: string[]): Promise<NormalizedModSearchResult[]> {

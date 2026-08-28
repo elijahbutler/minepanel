@@ -71,6 +71,23 @@ describe('JavaServerStrategy', () => {
     expect(env.VERSION).toBe('1.21.1');
   });
 
+  it('should expose managed Modrinth plugins to Paper', () => {
+    const config = {
+      ...baseConfig(),
+      serverType: 'PAPER',
+      modrinthProjects: 'luckperms\nviaversion',
+      modrinthDownloadDependencies: 'required',
+      modrinthDefaultVersionType: 'beta',
+    } as ServerConfig;
+
+    const env = strategy.buildEnvironment(config);
+
+    expect(env.TYPE).toBe('PAPER');
+    expect(env.MODRINTH_PROJECTS).toBe('luckperms\nviaversion');
+    expect(env.MODRINTH_DOWNLOAD_DEPENDENCIES).toBe('required');
+    expect(env.MODRINTH_PROJECTS_DEFAULT_VERSION_TYPE).toBe('beta');
+  });
+
   it('should install an unpublished modpack zip with AUTO_CURSEFORGE', () => {
     const config = {
       ...baseConfig(),
