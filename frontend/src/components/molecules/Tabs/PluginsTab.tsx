@@ -20,6 +20,7 @@ interface PluginsTabProps {
   onOpenFiles?: () => void;
 }
 
+/** Configures plugin-server settings and managed Modrinth projects. */
 export const PluginsTab: FC<PluginsTabProps> = ({ config, updateConfig, onOpenFiles }) => {
   const { t } = useLanguage();
   const [showPluginsBrowser, setShowPluginsBrowser] = useState(false);
