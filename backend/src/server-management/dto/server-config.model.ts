@@ -335,6 +335,9 @@ export class ServerConfigDto {
   restartPolicy?: 'no' | 'always' | 'on-failure' | 'unless-stopped';
 
   @IsString()
+  @Matches(/^(?:0|[1-9]\d{0,8})?$/, {
+    message: 'stopDelay must be empty or a whole number between 0 and 999999999',
+  })
   @IsOptional()
   stopDelay?: string;
 

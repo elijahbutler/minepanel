@@ -270,6 +270,9 @@ export const LifecycleTab: FC<LifecycleTabProps> = ({ config, updateConfig }) =>
           <Input
             id="stopDelay"
             type="number"
+            min={0}
+            max={999999999}
+            step={1}
             value={config.stopDelay}
             onChange={(e) => updateConfig('stopDelay', e.target.value)}
             placeholder="60"
