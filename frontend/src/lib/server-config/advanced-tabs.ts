@@ -31,6 +31,7 @@ export const ADVANCED_TAB_HAS_CUSTOM_VALUES: Record<string, (config: ServerConfi
     config.enableAutoPause === true ||
     (isSet(config.restartPolicy) && !DEFAULT_RESTART_POLICIES.includes(config.restartPolicy)) ||
     (isSet(config.stopDelay) && config.stopDelay !== '60') ||
+    isSet(config.shutdownBroadcastMessage) ||
     (isSet(config.tz) && config.tz !== 'UTC'),
 
   // `dockerVolumes` is deliberately not checked: the panel rewrites it to absolute

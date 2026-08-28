@@ -1,4 +1,5 @@
 import { ServerConfig } from '../dto/server-config.model';
+import { buildBroadcastCommand } from '../broadcast-message.util';
 import { IServerStrategy, ServerEdition } from './server-strategy.interface';
 
 export class JavaServerStrategy implements IServerStrategy {
@@ -99,6 +100,10 @@ export class JavaServerStrategy implements IServerStrategy {
     };
 
     if (config.seed) env['SEED'] = config.seed;
+    const shutdownBroadcastCommand = buildBroadcastCommand(config.shutdownBroadcastMessage, {
+      seconds: config.stopDelay || '0',
+    });
+    if (shutdownBroadcastCommand) env['STOP_SERVER_DELAY_COMMAND'] = shutdownBroadcastCommand;
     this.addWorldConfig(env, config);
 
     this.addJvmOptions(env, config);

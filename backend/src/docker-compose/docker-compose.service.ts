@@ -6,6 +6,7 @@ import * as fs from 'fs-extra';
 import * as yaml from 'js-yaml';
 import * as path from 'node:path';
 import { ServerConfig, ServerEdition, SHUTDOWN_BUFFER_SECONDS, UpdateServerConfig } from 'src/server-management/dto/server-config.model';
+import { buildRconBroadcastScript } from 'src/server-management/broadcast-message.util';
 import { ServerStrategyFactory } from 'src/server-management/strategies';
 import { getComposeLabel, getComposeLabelFlag } from 'src/common/compose/compose-labels';
 import { ServerIndexEntry, ServerStoreService } from './server-store.service';
@@ -622,6 +623,8 @@ export class DockerComposeService implements OnApplicationBootstrap {
       rconPassword: '',
       broadcastRconToOps: false,
 
+      shutdownBroadcastMessage: '',
+
       enableBackup: false,
       backupInterval: '24h',
       backupMethod: 'tar',
@@ -630,6 +633,7 @@ export class DockerComposeService implements OnApplicationBootstrap {
       backupDestDir: '/backups',
       backupName: 'world',
       backupOnStartup: true,
+      backupBroadcastMessage: '',
       pauseIfNoPlayers: false,
       playersOnlineCheckInterval: '5m',
       rconRetries: '5',
@@ -1203,10 +1207,7 @@ export class DockerComposeService implements OnApplicationBootstrap {
   }
 
   // Docker kills the container after this, so it must outlast the itzg stop announcement plus the final save
-  private resolveStopGracePeriod(config: ServerConfig, edition: ServerEdition): number {
-    if (edition !== 'JAVA') {
-      return SHUTDOWN_BUFFER_SECONDS;
-    }
+  private resolveStopGracePeriod(config: ServerConfig): number {
     const announceDelay = Number.parseInt(config.stopDelay ?? '', 10);
     return (Number.isFinite(announceDelay) && announceDelay > 0 ? announceDelay : 0) + SHUTDOWN_BUFFER_SECONDS;
   }
@@ -1234,7 +1235,7 @@ export class DockerComposeService implements OnApplicationBootstrap {
       environment,
       volumes,
       restart: config.restartPolicy,
-      stop_grace_period: `${this.resolveStopGracePeriod(config, edition)}s`,
+      stop_grace_period: `${this.resolveStopGracePeriod(config)}s`,
     };
 
     // Only add resource limits for Java (Bedrock doesn't use JVM)
@@ -1361,6 +1362,8 @@ export class DockerComposeService implements OnApplicationBootstrap {
     if (config.backupExcludes) env.EXCLUDES = config.backupExcludes;
     if (config.tarCompressMethod && config.backupMethod === 'tar') env.TAR_COMPRESS_METHOD = config.tarCompressMethod;
     if (config.enableSync === false) env.ENABLE_SYNC = 'false';
+    const backupBroadcastScript = buildRconBroadcastScript(config.backupBroadcastMessage);
+    if (backupBroadcastScript) env.PRE_SAVE_ALL_SCRIPT = backupBroadcastScript;
   }
 
   private parseBackupHostDir(serverId: string, volumes?: string[]): string | undefined {

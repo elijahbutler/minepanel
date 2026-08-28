@@ -1,4 +1,5 @@
 import { ServerConfig } from '../dto/server-config.model';
+import { buildBroadcastCommand } from '../broadcast-message.util';
 import { IServerStrategy, ServerEdition } from './server-strategy.interface';
 
 export class BedrockServerStrategy implements IServerStrategy {
@@ -57,6 +58,15 @@ export class BedrockServerStrategy implements IServerStrategy {
       VIEW_DISTANCE: config.viewDistance,
       PLAYER_IDLE_TIMEOUT: config.playerIdleTimeout || '0',
     };
+
+    if (config.stopDelay) {
+      env['STOP_SERVER_ANNOUNCE_DELAY'] = config.stopDelay;
+    }
+
+    const shutdownBroadcastCommand = buildBroadcastCommand(config.shutdownBroadcastMessage, {
+      seconds: config.stopDelay || '0',
+    });
+    if (shutdownBroadcastCommand) env['STOP_SERVER_ANNOUNCE'] = shutdownBroadcastCommand;
 
     // Version handling - always include VERSION, default to LATEST
     env['VERSION'] = config.minecraftVersion || 'LATEST';

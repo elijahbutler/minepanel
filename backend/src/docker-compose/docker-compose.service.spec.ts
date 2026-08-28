@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
+import { ServerConfig } from 'src/server-management/dto/server-config.model';
 import { DockerComposeService } from './docker-compose.service';
 import { ServerStoreService } from './server-store.service';
 import * as fs from 'fs-extra';
@@ -621,6 +622,43 @@ describe('DockerComposeService', () => {
       expect(backupEnv.PRUNE_RESTIC_RETENTION).toBeUndefined();
       expect(backupEnv.RESTIC_HOSTNAME).toBeUndefined();
       expect(backupEnv.AWS_ACCESS_KEY_ID).toBeUndefined();
+    });
+
+    it('should broadcast before pausing world saves for a backup', async () => {
+      const config = (
+        service as unknown as { createDefaultConfig(id: string): ServerConfig }
+      ).createDefaultConfig('backup-broadcast');
+      config.enableBackup = true;
+      config.backupBroadcastMessage = 'World backup starting.';
+
+      await service.generateDockerComposeFile(config, false);
+
+      const writeFileMock = fs.writeFile as unknown as jest.Mock;
+      const [, yamlContent] = writeFileMock.mock.calls[0];
+      const parsed = yaml.load(yamlContent as string) as {
+        services: { backup: { environment: Record<string, string> } };
+      };
+
+      expect(parsed.services.backup.environment.PRE_SAVE_ALL_SCRIPT).toBe(
+        "rcon-cli 'say World backup starting.' || true",
+      );
+    });
+
+    it('should include the Bedrock shutdown warning delay in the stop grace period', async () => {
+      const config = (
+        service as unknown as { createDefaultConfig(id: string, edition: 'BEDROCK'): ServerConfig }
+      ).createDefaultConfig('bedrock-broadcast', 'BEDROCK');
+      config.stopDelay = '45';
+
+      await service.generateDockerComposeFile(config, false);
+
+      const writeFileMock = fs.writeFile as unknown as jest.Mock;
+      const [, yamlContent] = writeFileMock.mock.calls[0];
+      const parsed = yaml.load(yamlContent as string) as {
+        services: { mc: { stop_grace_period: string } };
+      };
+
+      expect(parsed.services.mc.stop_grace_period).toBe('105s');
     });
 
     it('should round-trip restic settings through the generated compose file', async () => {

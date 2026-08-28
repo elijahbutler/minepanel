@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsBoolean, IsEnum, IsNotEmpty, Matches } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsEnum, IsNotEmpty, Matches, MaxLength } from 'class-validator';
 import { PartialType } from '@nestjs/mapped-types';
 
 export type ServerEdition = 'JAVA' | 'BEDROCK';
@@ -338,6 +338,11 @@ export class ServerConfigDto {
   @IsOptional()
   stopDelay?: string;
 
+  @IsString()
+  @MaxLength(256)
+  @IsOptional()
+  shutdownBroadcastMessage?: string;
+
   @IsBoolean()
   @IsOptional()
   execDirectly?: boolean;
@@ -366,6 +371,11 @@ export class ServerConfigDto {
   @IsBoolean()
   @IsOptional()
   backupOnStartup?: boolean;
+
+  @IsString()
+  @MaxLength(256)
+  @IsOptional()
+  backupBroadcastMessage?: string;
 
   @IsBoolean()
   @IsOptional()

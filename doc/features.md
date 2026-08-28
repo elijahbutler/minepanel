@@ -55,10 +55,14 @@ instead of reporting zero players.
 | Feature        | Description                                               |
 | -------------- | --------------------------------------------------------- |
 | Basic controls | Start, Stop, Restart, Delete                              |
+| Shutdown warning | Set a per-server player message in Lifecycle. `{seconds}` is replaced with the configured shutdown delay. Java and Bedrock use the same field |
 | Force stop     | Stops now instead of waiting for the shutdown announcement (`STOP_SERVER_ANNOUNCE_DELAY`, 60s by default). Sends `stop` over RCON so the world is still saved, and kills the container after 10s if it does not exit |
 | Console        | RCON (Java) or send-command (Bedrock)                     |
 | Quick actions  | Save world, toggle whitelist, set time/weather, broadcast |
 | Scheduled tasks | Auto restarts and scheduled console commands, per server in the Tasks tab. Schedule by fixed interval or standard 5-field cron expression (e.g. `0 4 * * *` = daily at 04:00, backend timezone) |
+
+`shutdownBroadcastMessage` replaces the image's standard shutdown warning when set. Leave it
+empty to keep the standard warning, or set the shutdown delay to `0` to stop without a warning.
 
 ## Roles and Access Control
 
@@ -158,13 +162,14 @@ Operational notes:
 | Restore   | Select and restore    |
 | Download  | Get backup files      |
 
-Backup configuration is available in **Advanced -> Backup** (Java servers):
+Backup configuration is available in **Backups** for Java servers:
 
 - `backupMethod`: `tar`, `rsync`, `restic`, `rclone`
 - `backupInterval`, `backupInitialDelay`
 - `backupPruneDays`, `backupDestDir`, `backupExcludes`
 - `backupHostDir`: host path where backups are physically stored. Empty uses the global `BACKUP_BASE_DIR` or the default `${BASE_DIR}/servers/<id>/backups`
 - `backupOnStartup`
+- `backupBroadcastMessage`: optional player warning sent before the sidecar pauses world saves. An empty value sends no warning
 
 Practical defaults:
 
