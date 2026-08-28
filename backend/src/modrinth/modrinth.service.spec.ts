@@ -87,4 +87,69 @@ describe('ModrinthService', () => {
       }),
     ).rejects.toMatchObject({ status: HttpStatus.BAD_GATEWAY });
   });
+
+  it('searchMods should filter Paper plugins and accept a Modrinth plugin URL', async () => {
+    mockClient.get.mockResolvedValue({
+      data: {
+        hits: [
+          {
+            project_id: 'A3',
+            slug: 'luckperms',
+            title: 'LuckPerms',
+            description: 'Permissions plugin',
+            downloads: 1000000,
+            versions: ['1.21.4'],
+            categories: ['paper', 'management'],
+          },
+        ],
+        offset: 0,
+        limit: 20,
+        total_hits: 1,
+      },
+    });
+
+    const result = await service.searchMods({
+      q: 'https://modrinth.com/plugin/luckperms',
+      minecraftVersion: '1.21.4',
+      loader: 'paper',
+      projectType: 'plugin',
+    });
+
+    expect(mockClient.get).toHaveBeenCalledWith('/search', {
+      params: expect.objectContaining({
+        query: 'luckperms',
+        facets: JSON.stringify([
+          ['all_project_types:plugin'],
+          ['versions:1.21.4'],
+          ['categories:paper'],
+        ]),
+      }),
+    });
+    expect(result.data[0]).toMatchObject({
+      slug: 'luckperms',
+      supportedLoaders: ['paper'],
+    });
+  });
+
+  it('searchMods should preserve malformed URL encoding as a search term', async () => {
+    mockClient.get.mockResolvedValue({
+      data: {
+        hits: [],
+        offset: 0,
+        limit: 20,
+        total_hits: 0,
+      },
+    });
+
+    await service.searchMods({
+      q: 'https://modrinth.com/plugin/%',
+      minecraftVersion: '1.21.4',
+      loader: 'paper',
+      projectType: 'plugin',
+    });
+
+    expect(mockClient.get).toHaveBeenCalledWith('/search', {
+      params: expect.objectContaining({ query: '%' }),
+    });
+  });
 });

@@ -19,6 +19,7 @@ import { LINK_MODS_PLUGINS } from "@/lib/providers/constants";
 import { mcToast } from "@/lib/utils/minecraft-toast";
 import { CurseForgeModpack } from "@/services/curseforge/curseforge.service";
 import { ModsBrowserDialog } from "@/components/molecules/mods/ModsBrowserDialog";
+import { ModrinthProjectsSection } from "@/components/molecules/mods/ModrinthProjectsSection";
 import { ModsListEditor } from "@/components/molecules/mods/ModsListEditor";
 import { ModpackFilePicker } from "@/components/molecules/ModpackFilePicker";
 import { CurseForgeModpackSection } from "@/components/molecules/modpacks/CurseForgeModpackSection";
@@ -606,99 +607,14 @@ export const ModsTab: FC<ModsTabProps> = ({ serverId, config, updateConfig }) =>
         )}
 
         {(isForge || isNeoforge || isFabric || isCurseForge || isModrinth) && (
-          <>
-            <ModsListEditor
-              id="modrinthProjects"
-              provider="modrinth"
-              accent="blue"
-              icon="/images/enchanted-book.webp"
-              label={t("modrinthProjects")}
-              description={t("modrinthProjectsDesc")}
-              helpText={t("modrinthProjectsHelp")}
-              placeholder="fabric-api, cloth-config, datapack:terralith"
-              browseUrl="https://modrinth.com/mods"
-              value={config.modrinthProjects || ""}
-              minecraftVersion={effectiveMinecraftVersion}
-              loader={resolvedLoader}
-              onChange={(value) => updateConfig("modrinthProjects", value)}
-              onSearch={() => openModsBrowser("modrinth", "modrinthProjects")}
-            />
-
-            <div className="space-y-2 p-4 rounded-md bg-gray-800/50 border border-gray-700/50">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="versionFromModrinthProjects" className="text-gray-200 font-minecraft text-sm flex items-center gap-2">
-                  <Image src="/images/compass.webp" alt="Version" width={16} height={16} />
-                  {t("versionFromModrinthProjects")}
-                </Label>
-                <Switch id="versionFromModrinthProjects" checked={config.versionFromModrinthProjects || false} onCheckedChange={(checked) => updateConfig("versionFromModrinthProjects", checked)} />
-              </div>
-              <p className="text-xs text-gray-400">{t("versionFromModrinthProjectsDesc")}</p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2 p-4 rounded-md bg-gray-800/50 border border-gray-700/50">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="modrinthDownloadDependencies" className="text-gray-200 font-minecraft text-sm flex items-center gap-2">
-                    <Image src="/images/hopper.webp" alt="Dependencies" width={16} height={16} />
-                    {t("modrinthDependencies")}
-                  </Label>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button type="button" variant="ghost" size="icon" className="h-6 w-6 p-0 bg-transparent hover:bg-gray-700/50">
-                          <HelpCircle className="h-4 w-4 text-gray-400" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent className="bg-gray-800 border-gray-700 text-gray-200">
-                        <p>{t("modrinthDependenciesHelp")}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-                <Select value={config.modrinthDownloadDependencies || "none"} onValueChange={(value: "none" | "required" | "optional") => updateConfig("modrinthDownloadDependencies", value)}>
-                  <SelectTrigger className="bg-gray-800/70 text-gray-200 border-gray-700/50 focus:ring-blue-500/30">
-                    <SelectValue placeholder="none" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-gray-800 border-gray-700 text-gray-200">
-                    <SelectItem value="none">{t("dependenciesNone")}</SelectItem>
-                    <SelectItem value="required">{t("dependenciesRequired")}</SelectItem>
-                    <SelectItem value="optional">{t("dependenciesOptional")}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2 p-4 rounded-md bg-gray-800/50 border border-gray-700/50">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="modrinthDefaultVersionType" className="text-gray-200 font-minecraft text-sm flex items-center gap-2">
-                    <Image src="/images/compass.webp" alt="Version Type" width={16} height={16} />
-                    {t("modrinthVersionType")}
-                  </Label>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button type="button" variant="ghost" size="icon" className="h-6 w-6 p-0 bg-transparent hover:bg-gray-700/50">
-                          <HelpCircle className="h-4 w-4 text-gray-400" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent className="bg-gray-800 border-gray-700 text-gray-200">
-                        <p>{t("modrinthVersionTypeHelp")}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-                <Select value={config.modrinthDefaultVersionType || "release"} onValueChange={(value: "release" | "beta" | "alpha") => updateConfig("modrinthDefaultVersionType", value)}>
-                  <SelectTrigger className="bg-gray-800/70 text-gray-200 border-gray-700/50 focus:ring-blue-500/30">
-                    <SelectValue placeholder="release" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-gray-800 border-gray-700 text-gray-200">
-                    <SelectItem value="release">{t("versionRelease")}</SelectItem>
-                    <SelectItem value="beta">{t("versionBeta")}</SelectItem>
-                    <SelectItem value="alpha">{t("versionAlpha")}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </>
+          <ModrinthProjectsSection
+            config={config}
+            minecraftVersion={effectiveMinecraftVersion}
+            loader={resolvedLoader}
+            showVersionFromProjects
+            updateConfig={updateConfig}
+            onSearch={() => openModsBrowser("modrinth", "modrinthProjects")}
+          />
         )}
 
         {isCurseForge && (
