@@ -47,14 +47,17 @@ jobs:
             exit 1
           fi
 
-          source_image="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-$SOURCE_SHA"
+          image_repository="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+          source_image="$image_repository:sha-$SOURCE_SHA"
           source_digest="$(docker buildx imagetools inspect "$source_image" --format '{{.Manifest.Digest}}')"
-          docker buildx imagetools create --tag "$TARGET_IMAGE" "$source_image"
-          target_digest="$(docker buildx imagetools inspect "$TARGET_IMAGE" --format '{{.Manifest.Digest}}')"
 
-          if [[ "$source_digest" != "$target_digest" ]]; then
-            echo "Digest mismatch: source=$source_digest target=$target_digest" >&2
+          if [[ ! "$source_digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "Could not resolve an immutable digest for $source_image" >&2
             exit 1
           fi
 
-          echo "Promoted $source_image to $TARGET_IMAGE at $target_digest"
+          source_manifest="$image_repository@$source_digest"
+          docker buildx imagetools create --dry-run "$source_manifest" >/dev/null
+          docker buildx imagetools create --tag "$TARGET_IMAGE" "$source_manifest"
+
+          echo "Promoted $source_image to $TARGET_IMAGE at $source_digest"
