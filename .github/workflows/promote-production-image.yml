@@ -2,6 +2,11 @@ name: Promote fork production image
 
 on:
   workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Full commit SHA of the tested image to promote
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -34,11 +39,17 @@ jobs:
       - name: Promote tested main image to production
         shell: bash
         env:
-          SOURCE_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
           TARGET_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:prod
         run: |
-          source_digest="$(docker buildx imagetools inspect "$SOURCE_IMAGE" --format '{{.Manifest.Digest}}')"
-          docker buildx imagetools create --tag "$TARGET_IMAGE" "$SOURCE_IMAGE"
+          if [[ ! "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "source_sha must be a full lowercase commit SHA" >&2
+            exit 1
+          fi
+
+          source_image="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-$SOURCE_SHA"
+          source_digest="$(docker buildx imagetools inspect "$source_image" --format '{{.Manifest.Digest}}')"
+          docker buildx imagetools create --tag "$TARGET_IMAGE" "$source_image"
           target_digest="$(docker buildx imagetools inspect "$TARGET_IMAGE" --format '{{.Manifest.Digest}}')"
 
           if [[ "$source_digest" != "$target_digest" ]]; then
@@ -46,4 +57,4 @@ jobs:
             exit 1
           fi
 
-          echo "Promoted $SOURCE_IMAGE to $TARGET_IMAGE at $target_digest"
+          echo "Promoted $source_image to $TARGET_IMAGE at $target_digest"
