@@ -34,9 +34,11 @@ export const PluginsTab: FC<PluginsTabProps> = ({ config, updateConfig, onOpenFi
     [config.modrinthProjects],
   );
 
+  /** Matches existing entries by slug or project ID so either insertion mode toggles cleanly. */
   const isPluginAlreadyAdded = (plugin: ModSearchItem): boolean =>
     findModEntryIndex(modrinthPluginEntries, [plugin.slug, plugin.projectId]) >= 0;
 
+  /** Adds or removes one browser result while preserving the managed-project list syntax. */
   const togglePluginFromBrowser = (
     plugin: ModSearchItem,
     insertAs: "slug" | "id",
