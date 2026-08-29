@@ -1,15 +1,14 @@
-import Link from "next/link";
-import Image from "next/image";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, PowerIcon, RefreshCw, Server, FolderOpen, Trash2, Zap } from "lucide-react";
-import { useLanguage } from "@/lib/hooks/useLanguage";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useState } from "react";
+import Link from "next/link";
+import { ArrowLeft, FolderOpen, PowerIcon, RefreshCw, Trash2, Zap } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { ServerConnectionInfo } from "@/components/molecules/ServerConnectionInfo";
-import { getStatusIcon, getStatusBadgeClass } from "@/lib/utils/server-status";
-import { ServerEdition } from "@/lib/types/types";
 import { ServerRuntimeChips } from "@/components/molecules/ServerRuntimeChips";
+import { useLanguage } from "@/lib/hooks/useLanguage";
+import type { ServerEdition } from "@/lib/types/types";
+import { getStatusBadgeClass } from "@/lib/utils/server-status";
 
 interface ServerPageHeaderProps {
   readonly serverId: string;
@@ -28,8 +27,9 @@ interface ServerPageHeaderProps {
 
 export function ServerPageHeader({ serverId, serverName, serverStatus, serverPort, serverEdition, isProcessing, onStartServer, onStopServer, onForceStopServer, onRestartServer, onClearData, onOpenFiles }: ServerPageHeaderProps) {
   const { t } = useLanguage();
-  const containerName = serverId;
   const [isClearing, setIsClearing] = useState(false);
+  const displayName = serverName || serverId;
+  const isRunningOrStarting = serverStatus === "running" || serverStatus === "starting";
 
   const handleClearData = async () => {
     setIsClearing(true);
@@ -56,74 +56,103 @@ export function ServerPageHeader({ serverId, serverName, serverStatus, serverPor
   };
 
   return (
-    <div className="mc-panel p-6 space-y-4 text-gray-200">
-      <div className="flex items-center gap-3">
-        <Link href="/dashboard/servers">
-          <Button variant="outline" size="icon" type="button" className="border-gray-700/50 bg-gray-800/40 text-gray-200 hover:bg-emerald-600/20 hover:text-emerald-400 hover:border-emerald-600/50">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white font-minecraft">{serverId}</h1>
-        <Badge variant="outline" className={`px-3 py-1 ${getStatusBadgeClass(serverStatus)}`}>
-          {serverStatus === "starting" ? (
-            <span className="flex items-center gap-1">
-              <RefreshCw className="h-3 w-3 animate-spin" />
-              {getStatusText(serverStatus)}
-            </span>
-          ) : (
-            <span className="flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full bg-current"></div>
-              {getStatusText(serverStatus)}
-            </span>
-          )}
-        </Badge>
-      </div>
+    <div className="mc-panel p-3 text-white sm:p-4">
+      <div className="flex flex-col gap-3 2xl:flex-row 2xl:items-center">
+        <div className="flex min-w-0 flex-1 items-start gap-2.5 sm:items-center">
+          <Link href="/dashboard/servers" className="shrink-0">
+            <Button
+              variant="outline"
+              size="icon"
+              type="button"
+              aria-label={t("back")}
+              className="h-9 w-9 border-gray-700/50 bg-gray-800/40 text-white hover:border-emerald-600/50 hover:bg-emerald-600/20 hover:text-emerald-300"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
 
-      {serverStatus === "running" && <ServerRuntimeChips serverId={serverId} serverStatus={serverStatus} />}
+          <div className="min-w-0 flex-1 space-y-2">
+            <div className="flex min-w-0 items-center gap-2">
+              <h1 className="min-w-0 flex-1 truncate text-lg font-bold tracking-tight text-white font-minecraft sm:text-xl 2xl:text-2xl" title={serverId}>
+                {displayName}
+              </h1>
 
-      <div className="mc-slot flex flex-col md:flex-row items-start md:items-center gap-4 p-4">
-        <div className="flex items-center gap-3">
-          <div className="mc-slot shrink-0 w-12 h-12 relative flex items-center justify-center">
-            <Image src={getStatusIcon(serverStatus)} alt="Server Status" width={40} height={40} className="pixelated object-contain" />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-gray-100 font-minecraft">{serverName || "Minecraft Server"}</p>
-            <div className="flex items-center gap-1 mt-1">
-              <Server className="h-3 w-3 text-gray-400" />
-              <p className="text-xs text-gray-400">{containerName}</p>
+              {serverStatus === "running" && (
+                <ServerConnectionInfo port={serverPort} serverId={serverId} edition={serverEdition} />
+              )}
+
+              <Badge variant="outline" className={`shrink-0 px-2 py-0.5 text-[10px] sm:text-xs ${getStatusBadgeClass(serverStatus)}`}>
+                {serverStatus === "starting" ? (
+                  <span className="flex items-center gap-1">
+                    <RefreshCw className="h-3 w-3 animate-spin" />
+                    {getStatusText(serverStatus)}
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                    {getStatusText(serverStatus)}
+                  </span>
+                )}
+              </Badge>
             </div>
+
+            {serverStatus === "running" && <ServerRuntimeChips serverId={serverId} serverStatus={serverStatus} />}
           </div>
         </div>
 
-        <div className="ml-auto flex flex-wrap gap-2 mt-3 md:mt-0">
-          {serverStatus === "running" || serverStatus === "starting" ? (
-            <Button type="button" variant="destructive" onClick={onStopServer} className="gap-2 bg-red-600 hover:bg-red-700 font-minecraft text-white">
+        <div className="flex flex-wrap items-center gap-2 sm:pl-11 2xl:ml-auto 2xl:pl-0">
+          {isRunningOrStarting ? (
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              onClick={onStopServer}
+              aria-label={t("stopServer")}
+              title={t("stopServer")}
+              className="h-9 gap-2 bg-red-600 px-2.5 text-white hover:bg-red-700 sm:px-3"
+            >
               <PowerIcon className="h-4 w-4" />
-              {t("stopServer")}
+              <span className="hidden font-minecraft sm:inline">{t("stopServer")}</span>
             </Button>
           ) : (
-            <Button type="button" variant="default" onClick={onStartServer} className="gap-2 bg-emerald-600 hover:bg-emerald-700 font-minecraft text-white">
+            <Button
+              type="button"
+              variant="default"
+              size="sm"
+              onClick={onStartServer}
+              aria-label={t("startServer")}
+              title={t("startServer")}
+              className="h-9 gap-2 bg-emerald-600 px-2.5 text-white hover:bg-emerald-700 sm:px-3"
+            >
               <PowerIcon className="h-4 w-4" />
-              {t("startServer")}
+              <span className="hidden font-minecraft sm:inline">{t("startServer")}</span>
             </Button>
           )}
 
-          {(serverStatus === "running" || serverStatus === "starting") && (
+          {isRunningOrStarting && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button type="button" variant="outline" disabled={isProcessing} className="gap-2 border-amber-700/50 bg-gray-800/40 text-amber-300 hover:bg-amber-600/20 hover:text-amber-200 hover:border-amber-600/50 font-minecraft">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={isProcessing}
+                  aria-label={t("forceStopServer")}
+                  title={t("forceStopServer")}
+                  className="h-9 gap-2 border-amber-700/50 bg-gray-800/40 px-2.5 text-amber-300 hover:border-amber-600/50 hover:bg-amber-600/20 hover:text-amber-200 xl:px-3"
+                >
                   <Zap className="h-4 w-4" />
-                  {t("forceStopServer")}
+                  <span className="hidden font-minecraft xl:inline">{t("forceStopServer")}</span>
                 </Button>
               </AlertDialogTrigger>
-              <AlertDialogContent className="bg-gray-900 border-gray-700">
+              <AlertDialogContent className="border-gray-700 bg-gray-900">
                 <AlertDialogHeader>
                   <AlertDialogTitle className="text-amber-400 font-minecraft">{t("forceStopConfirmTitle")}</AlertDialogTitle>
                   <AlertDialogDescription className="text-gray-300">{t("forceStopConfirmDesc")}</AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel className="bg-gray-700 hover:bg-gray-600 text-gray-200 border-gray-600">{t("cancel")}</AlertDialogCancel>
-                  <AlertDialogAction onClick={onForceStopServer} disabled={isProcessing} className="bg-amber-700 hover:bg-amber-800 text-white border-amber-900/50 font-minecraft">
+                  <AlertDialogCancel className="border-gray-600 bg-gray-700 text-gray-200 hover:bg-gray-600">{t("cancel")}</AlertDialogCancel>
+                  <AlertDialogAction onClick={onForceStopServer} disabled={isProcessing} className="border-amber-900/50 bg-amber-700 text-white hover:bg-amber-800 font-minecraft">
                     {t("forceStopServer")}
                   </AlertDialogAction>
                 </AlertDialogFooter>
@@ -131,49 +160,63 @@ export function ServerPageHeader({ serverId, serverName, serverStatus, serverPor
             </AlertDialog>
           )}
 
-          <Button type="button" variant="outline" onClick={onRestartServer} disabled={isProcessing || serverStatus !== "running"} className="gap-2 border-gray-700/50 bg-gray-800/40 text-gray-200 hover:bg-orange-600/20 hover:text-orange-400 hover:border-orange-600/50">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onRestartServer}
+            disabled={isProcessing || serverStatus !== "running"}
+            aria-label={isProcessing ? t("restarting") : t("restart2")}
+            title={isProcessing ? t("restarting") : t("restart2")}
+            className="h-9 gap-2 border-gray-700/50 bg-gray-800/40 px-2.5 text-white hover:border-orange-600/50 hover:bg-orange-600/20 hover:text-orange-300 xl:px-3"
+          >
             <RefreshCw className={`h-4 w-4 ${isProcessing ? "animate-spin" : ""}`} />
-            {isProcessing ? t("restarting") : t("restart2")}
+            <span className="hidden xl:inline">{isProcessing ? t("restarting") : t("restart2")}</span>
           </Button>
 
           {onOpenFiles && (
-            <Button type="button" variant="outline" onClick={onOpenFiles} className="gap-2 border-gray-700/50 bg-gray-800/40 text-gray-200 hover:bg-blue-600/20 hover:text-blue-400 hover:border-blue-600/50">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onOpenFiles}
+              aria-label={t("files")}
+              title={t("files")}
+              className="h-9 gap-2 border-gray-700/50 bg-gray-800/40 px-2.5 text-white hover:border-blue-600/50 hover:bg-blue-600/20 hover:text-blue-300 xl:px-3"
+            >
               <FolderOpen className="h-4 w-4" />
-              {t("files")}
+              <span className="hidden xl:inline">{t("files")}</span>
             </Button>
           )}
 
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button type="button" variant="outline" disabled={serverStatus === "running" || serverStatus === "starting"} className="gap-2 border-red-700/50 bg-red-900/20 text-red-400 hover:bg-red-600/30 hover:text-red-300 hover:border-red-600/50 disabled:opacity-50 disabled:cursor-not-allowed">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                disabled={isRunningOrStarting}
+                aria-label={t("deleteConfirmTitle")}
+                title={t("deleteConfirmTitle")}
+                className="h-9 w-9 border-red-700/50 bg-red-900/20 text-red-400 hover:border-red-600/50 hover:bg-red-600/30 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-50"
+              >
                 <Trash2 className="h-4 w-4" />
               </Button>
             </AlertDialogTrigger>
-            <AlertDialogContent className="bg-gray-900 border-gray-700">
+            <AlertDialogContent className="border-gray-700 bg-gray-900">
               <AlertDialogHeader>
                 <AlertDialogTitle className="text-red-400 font-minecraft">{t("deleteConfirmTitle")}</AlertDialogTitle>
                 <AlertDialogDescription className="text-gray-300">{t("deleteConfirmDesc")}</AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel className="bg-gray-700 hover:bg-gray-600 text-gray-200 border-gray-600">{t("cancel")}</AlertDialogCancel>
-                <AlertDialogAction onClick={handleClearData} disabled={isClearing} className="bg-red-700 hover:bg-red-800 text-white border-red-900/50 font-minecraft">
+                <AlertDialogCancel className="border-gray-600 bg-gray-700 text-gray-200 hover:bg-gray-600">{t("cancel")}</AlertDialogCancel>
+                <AlertDialogAction onClick={handleClearData} disabled={isClearing} className="border-red-900/50 bg-red-700 text-white hover:bg-red-800 font-minecraft">
                   {isClearing ? t("deleting") : t("yesDeleteAll")}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
         </div>
-      </div>
-
-      {serverStatus === "running" && (
-        <div className="animate-fade-in-up">
-          <ServerConnectionInfo port={serverPort} serverId={serverId} edition={serverEdition} />
-        </div>
-      )}
-
-      <div className="text-xs text-gray-300 px-2">
-        <span className="font-medium">{t("tip")}</span> {t("configureServerTip")}
-        {serverStatus === "running" && ` ${t("changesRequireRestart")}`}
       </div>
     </div>
   );

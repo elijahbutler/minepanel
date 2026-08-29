@@ -1,15 +1,22 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Copy, Check, Globe, Wifi, Loader2, Network } from 'lucide-react';
-import { mcToast } from '@/lib/utils/minecraft-toast';
-import { m, AnimatePresence } from 'framer-motion';
-import { useLanguage } from '@/lib/hooks/useLanguage';
-import Image from 'next/image';
-import { getAllIPs, getProxyStatus, getServerProxyHostname } from '@/services/network.service';
-import { LINK_LEARN_HOW_LAN } from '@/lib/providers/constants';
-import { ServerEdition } from '@/lib/types/types';
+import { useEffect, useMemo, useState } from "react";
+import type { LucideIcon } from "lucide-react";
+import { Check, Copy, Globe, Link2, Loader2, Network, Wifi } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useLanguage } from "@/lib/hooks/useLanguage";
+import type { ServerEdition } from "@/lib/types/types";
+import { mcToast } from "@/lib/utils/minecraft-toast";
+import { getAllIPs, getProxyStatus, getServerProxyHostname } from "@/services/network.service";
 
 interface ServerConnectionInfoProps {
   readonly port: string;
@@ -17,262 +24,192 @@ interface ServerConnectionInfoProps {
   readonly edition?: ServerEdition;
 }
 
+interface ConnectionAddress {
+  readonly id: string;
+  readonly label: string;
+  readonly address: string;
+  readonly icon: LucideIcon;
+}
+
+function formatDirectAddress(host: string, port: string): string {
+  const normalizedHost = host.includes(":") && !host.startsWith("[") ? `[${host}]` : host;
+  return port ? `${normalizedHost}:${port}` : normalizedHost;
+}
+
+async function writeToClipboard(value: string): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(value);
+    return;
+  } catch {
+    const textArea = document.createElement("textarea");
+    textArea.value = value;
+    textArea.setAttribute("readonly", "");
+    textArea.style.position = "fixed";
+    textArea.style.opacity = "0";
+    document.body.appendChild(textArea);
+    textArea.select();
+    textArea.setSelectionRange(0, value.length);
+
+    const copied = document.execCommand("copy");
+    textArea.remove();
+    if (!copied) throw new Error("Clipboard copy failed");
+  }
+}
+
 export function ServerConnectionInfo({ port, serverId, edition }: ServerConnectionInfoProps) {
   const { t } = useLanguage();
-  const [copiedGlobal, setCopiedGlobal] = useState(false);
-  const [copiedLAN, setCopiedLAN] = useState(false);
-  const [copiedProxy, setCopiedProxy] = useState(false);
+  const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
   const [publicIP, setPublicIP] = useState<string | null>(null);
   const [localIPs, setLocalIPs] = useState<string[]>([]);
+  const [proxyAddress, setProxyAddress] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [proxyEnabled, setProxyEnabled] = useState(false);
-  const [proxyHostname, setProxyHostname] = useState<string | null>(null);
-
-  // Proxy only works with Java edition
-  const supportsProxy = edition !== 'BEDROCK';
 
   useEffect(() => {
+    let cancelled = false;
+
     const fetchData = async () => {
+      setIsLoading(true);
+      setPublicIP(null);
+      setLocalIPs([]);
+      setProxyAddress(null);
+
       try {
         const [ipData, proxyStatus] = await Promise.all([getAllIPs(), getProxyStatus()]);
+        const supportsProxy = edition !== "BEDROCK";
+        const hostname =
+          supportsProxy && proxyStatus.enabled && proxyStatus.baseDomain
+            ? await getServerProxyHostname(serverId)
+            : null;
+        const address =
+          hostname && proxyStatus.proxyPort && proxyStatus.proxyPort !== "25565"
+            ? formatDirectAddress(hostname, proxyStatus.proxyPort)
+            : hostname;
 
-        setPublicIP(ipData.publicIP);
-        setLocalIPs(ipData.localIPs);
-
-        // Check if proxy is enabled and get server hostname (Java only)
-        if (supportsProxy && proxyStatus.enabled && proxyStatus.baseDomain) {
-          setProxyEnabled(true);
-          const hostname = await getServerProxyHostname(serverId);
-          setProxyHostname(hostname);
+        if (!cancelled) {
+          setPublicIP(ipData.publicIP);
+          setLocalIPs(ipData.localIPs);
+          setProxyAddress(address);
         }
       } catch (error) {
-        console.error('Error fetching connection info:', error);
-        mcToast.error(t('error'));
+        console.error("Error fetching server addresses:", error);
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     };
 
-    fetchData();
-  }, [serverId, t, supportsProxy]);
+    void fetchData();
 
-  const copyToClipboard = async (text: string, type: 'global' | 'lan' | 'proxy') => {
-    try {
-      await navigator.clipboard.writeText(text);
-      if (type === 'global') {
-        setCopiedGlobal(true);
-        setTimeout(() => setCopiedGlobal(false), 2000);
-      } else if (type === 'lan') {
-        setCopiedLAN(true);
-        setTimeout(() => setCopiedLAN(false), 2000);
-      } else {
-        setCopiedProxy(true);
-        setTimeout(() => setCopiedProxy(false), 2000);
-      }
-      mcToast.success(t('copiedToClipboard'));
-    } catch (err) {
-      console.error('Error copying to clipboard:', err);
-      mcToast.error(t('copyError'));
-    }
-  };
+    return () => {
+      cancelled = true;
+    };
+  }, [edition, serverId]);
 
-  const displayPublicIP = publicIP || (localIPs.length > 0 ? localIPs[0] : 'localhost');
-  const globalAddress = `${displayPublicIP}:${port}`;
-  const lanAddress = localIPs.length > 0 ? `${localIPs[0]}:${port}` : null;
+  const addresses = useMemo<ConnectionAddress[]>(() => {
+    const options: ConnectionAddress[] = [];
 
-  const renderConnectionContent = () => {
-    if (isLoading) {
-      return (
-        <div className="flex items-center justify-center py-4">
-          <Loader2 className="h-6 w-6 text-emerald-400 animate-spin" />
-        </div>
-      );
+    if (proxyAddress) {
+      options.push({
+        id: "proxy",
+        label: t("proxyAddress"),
+        address: proxyAddress,
+        icon: Network,
+      });
     }
 
-    if (proxyEnabled && proxyHostname) {
-      return (
-        <>
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Network className="h-4 w-4 text-cyan-400" />
-              <span className="text-xs text-gray-400 font-medium">
-                {t('proxyHostname') || 'Proxy Hostname'}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="flex-1 bg-gray-900/80 rounded-md px-3 py-2 border border-gray-700/50 font-mono text-sm text-white flex items-center justify-between group hover:border-cyan-600/50 transition-colors">
-                <span className="select-all">{proxyHostname}</span>
-                <m.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => copyToClipboard(proxyHostname, 'proxy')}
-                    className="h-7 w-7 p-0 hover:bg-cyan-600/20 hover:text-cyan-400"
-                  >
-                    <AnimatePresence mode="wait">
-                      {copiedProxy ? (
-                        <m.div
-                          key="check"
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          exit={{ scale: 0 }}
-                        >
-                          <Check className="h-4 w-4 text-cyan-400" />
-                        </m.div>
-                      ) : (
-                        <m.div
-                          key="copy"
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          exit={{ scale: 0 }}
-                        >
-                          <Copy className="h-4 w-4" />
-                        </m.div>
-                      )}
-                    </AnimatePresence>
-                  </Button>
-                </m.div>
-              </div>
-            </div>
-          </div>
-          <div className="pt-2 border-t border-cyan-600/20">
-            <p className="text-xs text-gray-400 flex items-center gap-1">
-              <span className="text-cyan-400">🌐</span>
-              {t('proxyConnectionTip') || 'Players can connect using this hostname on port 25565'}
-            </p>
-          </div>
-        </>
-      );
+    if (publicIP) {
+      options.push({
+        id: "public",
+        label: t("globalIP"),
+        address: formatDirectAddress(publicIP, port),
+        icon: Globe,
+      });
     }
 
-    return (
-      <>
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <Globe className="h-4 w-4 text-emerald-400" />
-            <span className="text-xs text-gray-400 font-medium">{t('globalIP')}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="flex-1 bg-gray-900/80 rounded-md px-3 py-2 border border-gray-700/50 font-mono text-sm text-white flex items-center justify-between group hover:border-emerald-600/50 transition-colors">
-              <span className="select-all">{globalAddress}</span>
-              <m.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => copyToClipboard(globalAddress, 'global')}
-                  className="h-7 w-7 p-0 hover:bg-emerald-600/20 hover:text-emerald-400"
-                >
-                  <AnimatePresence mode="wait">
-                    {copiedGlobal ? (
-                      <m.div
-                        key="check"
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        exit={{ scale: 0 }}
-                      >
-                        <Check className="h-4 w-4 text-emerald-400" />
-                      </m.div>
-                    ) : (
-                      <m.div
-                        key="copy"
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        exit={{ scale: 0 }}
-                      >
-                        <Copy className="h-4 w-4" />
-                      </m.div>
-                    )}
-                  </AnimatePresence>
-                </Button>
-              </m.div>
-            </div>
-          </div>
-        </div>
-
-        {lanAddress && lanAddress !== globalAddress && (
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Wifi className="h-4 w-4 text-blue-400" />
-              <span className="text-xs text-gray-400 font-medium">{t('lanIP')}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="flex-1 bg-gray-900/80 rounded-md px-3 py-2 border border-gray-700/50 font-mono text-sm text-white flex items-center justify-between group hover:border-blue-600/50 transition-colors">
-                <span className="select-all">{lanAddress}</span>
-                <m.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => copyToClipboard(lanAddress, 'lan')}
-                    className="h-7 w-7 p-0 hover:bg-blue-600/20 hover:text-blue-400"
-                  >
-                    <AnimatePresence mode="wait">
-                      {copiedLAN ? (
-                        <m.div
-                          key="check"
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          exit={{ scale: 0 }}
-                        >
-                          <Check className="h-4 w-4 text-blue-400" />
-                        </m.div>
-                      ) : (
-                        <m.div
-                          key="copy"
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          exit={{ scale: 0 }}
-                        >
-                          <Copy className="h-4 w-4" />
-                        </m.div>
-                      )}
-                    </AnimatePresence>
-                  </Button>
-                </m.div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div className="pt-2 border-t border-emerald-600/20 space-y-2">
-          <p className="text-xs text-gray-400 flex items-center gap-1">
-            <span className="text-emerald-400">💡</span>
-            {t('connectionTip')}
-          </p>
-          {!lanAddress && (
-            <p className="text-xs text-gray-400 flex items-center gap-1">
-              <span className="text-blue-400">🏠</span>
-              {t('playingLAN')}{' '}
-              <a
-                href={LINK_LEARN_HOW_LAN}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-emerald-400 hover:text-emerald-300 underline transition-colors"
-              >
-                {t('learnHow')}
-              </a>
-            </p>
-          )}
-        </div>
-      </>
+    const uniqueLocalIPs = localIPs.filter(
+      (localIP, index) => localIP !== publicIP && localIPs.indexOf(localIP) === index,
     );
+    uniqueLocalIPs.forEach((localIP, index) => {
+      options.push({
+        id: `local-${localIP}`,
+        label: uniqueLocalIPs.length > 1 ? `${t("lanIP")} ${index + 1}` : t("lanIP"),
+        address: formatDirectAddress(localIP, port),
+        icon: Wifi,
+      });
+    });
+
+    return options;
+  }, [localIPs, port, proxyAddress, publicIP, t]);
+
+  const preferredAddress = addresses[0];
+
+  const copyToClipboard = async (address: string) => {
+    try {
+      await writeToClipboard(address);
+      setCopiedAddress(address);
+      window.setTimeout(() => setCopiedAddress((current) => (current === address ? null : current)), 2000);
+      mcToast.success(t("copiedToClipboard"));
+    } catch (error) {
+      console.error("Error copying server address:", error);
+      mcToast.error(t("copyError"));
+    }
   };
+
+  const tooltipText = isLoading
+    ? t("serverConnection")
+    : preferredAddress
+      ? t("copyServerAddress")
+      : t("serverAddressUnavailable");
 
   return (
-    <m.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-      className="bg-linear-to-br from-emerald-900/20 to-green-900/20 backdrop-blur-sm rounded-lg border-2 border-emerald-600/30 p-4 space-y-3"
-    >
-      <div className="flex items-center gap-2 mb-3">
-        <Image src="/images/compass.webp" alt="Connection" width={24} height={24} />
-        <h3 className="text-sm font-minecraft text-emerald-400 uppercase tracking-wide">
-          {t('serverConnection')}
-        </h3>
-        {isLoading && <Loader2 className="h-4 w-4 text-emerald-400 animate-spin ml-auto" />}
-      </div>
+    <DropdownMenu>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              disabled={isLoading || addresses.length === 0}
+              aria-label={tooltipText}
+              className="h-8 w-8 shrink-0 border-emerald-700/50 bg-gray-800/60 text-emerald-300 hover:border-emerald-500/70 hover:bg-emerald-600/20 hover:text-emerald-200"
+            >
+              {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Link2 className="h-3.5 w-3.5" />}
+            </Button>
+          </DropdownMenuTrigger>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-72 border border-gray-700 bg-gray-900 text-gray-100">
+          <p>{tooltipText}</p>
+          {preferredAddress && <p className="mt-1 font-mono text-[10px] text-emerald-300">{preferredAddress.address}</p>}
+        </TooltipContent>
+      </Tooltip>
 
-      {renderConnectionContent()}
-    </m.div>
+      <DropdownMenuContent
+        align="start"
+        className="w-[min(22rem,calc(100vw-2rem))] border-gray-700 bg-gray-900 p-1.5 text-gray-100"
+      >
+        <DropdownMenuLabel className="px-2 py-1 text-xs font-minecraft uppercase tracking-wide text-emerald-300">
+          {t("serverConnection")}
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator className="bg-gray-700" />
+        {addresses.map(({ id, label, address, icon: Icon }) => (
+          <DropdownMenuItem
+            key={id}
+            onSelect={() => void copyToClipboard(address)}
+            className="gap-2 rounded-none px-2 py-2 focus:bg-emerald-900/40 focus:text-white"
+          >
+            <Icon className="h-4 w-4 shrink-0 text-emerald-300" />
+            <span className="min-w-0 flex-1">
+              <span className="block text-xs text-gray-400">{label}</span>
+              <span className="block truncate font-mono text-xs text-gray-100">{address}</span>
+            </span>
+            {copiedAddress === address ? (
+              <Check className="h-4 w-4 shrink-0 text-emerald-300" />
+            ) : (
+              <Copy className="h-4 w-4 shrink-0 text-gray-500" />
+            )}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
